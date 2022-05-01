@@ -107,7 +107,7 @@ npm install
 | Name     | Description                                 | Options                     | Level or Permission          |
 |----------|---------------------------------------------|-----------------------------|------------------------------|
 | **/add** | This command is to set pre-defined settings | < target >                  | **1** or **ADMINISTRATOR**   |
-| **/set** | This command is to set pre-defined settings | < channel > **or** < role > | **1** or **MANAGE_MESSAGES** |
+| **/set** | This command is to set pre-defined settings | < channel > **or** < role > | **1** or **ADMINISTRATOR**   |
 
 ## Contributions to this repository
 - Fork this GitHub Repository
