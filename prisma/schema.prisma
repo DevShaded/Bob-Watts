@@ -1,0 +1,287 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Bot {
+  id        Int      @id @default(autoincrement())
+  name      String
+  url       String?
+  type      String
+  shardId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Users {
+  id               Int      @id @default(autoincrement())
+  accountId        String   @unique
+  username         String?
+  discriminator    String?
+  avatar           String?
+  bot              Boolean? @default(false)
+  createdTimestamp String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  Messages       Messages[]
+  Infractions    Infractions[]
+  Moderators     Moderators[]
+  GuildMembers   GuildMembers[]
+  ThreadChannels ThreadChannels[]
+  UserChannels   UserChannels[]
+  @@index([accountId])
+}
+
+model Guilds {
+  id                       Int      @id @default(autoincrement())
+  guildId                  String   @unique
+  available                Boolean
+  createdTimestamp         String
+  joinedTimestamp          String
+  large                    Boolean
+  maximumMembers           Int?
+  maximumPresences         Int?
+  memberCount              Int?
+  partnered                Boolean
+  prefix                   String   @default("!")
+  premiumSubscriptionCount Int?
+  premiumTier              String
+  verified                 Boolean
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  Messages       Messages[]
+  Infractions    Infractions[]
+  Moderators     Moderators[]
+  GuildSettings  GuildSettings[]
+  GuildMembers   GuildMembers[]
+  GuildLogs      GuildLogs[]
+  GuildChannels  GuildChannels[]
+  ThreadChannels ThreadChannels[]
+  @@index([guildId])
+}
+
+model Channels {
+  id               Int      @id @default(autoincrement())
+  channelId        String   @unique
+  name             String
+  nsfw             Boolean
+  topic            String?
+  type             String
+  createdTimestamp String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  Messages        Messages[]
+  GuildChannels   GuildChannels[]
+  ChannelMessages ChannelMessages[]
+  UserChannels    UserChannels[]
+  @@index([channelId])
+}
+
+model Messages {
+  id        Int      @id @default(autoincrement())
+  guild     Guilds   @relation(fields: [guildId], references: [guildId])
+  channel   Channels @relation(fields: [channelId], references: [channelId])
+  user      Users    @relation(fields: [accountId], references: [accountId])
+  messageId String   @unique
+  guildId   String
+  channelId String
+  accountId String
+  content   String?  @db.VarChar(4000)
+  url       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ChannelMessages ChannelMessages[]
+  @@index([messageId])
+  @@index([guildId])
+  @@index([channelId])
+  @@index([accountId])
+}
+
+model Infractions {
+  id        Int      @id @default(autoincrement())
+  guild     Guilds   @relation(fields: [guildId], references: [guildId])
+  user      Users    @relation(fields: [accountId], references: [accountId])
+  guildId   String
+  accountId String
+  reason    String   @db.VarChar(4000)
+  type      String
+  expires   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([guildId])
+  @@index([accountId])
+}
+
+model Moderators {
+  id        Int      @id @default(autoincrement())
+  guild     Guilds   @relation(fields: [guildId], references: [guildId])
+  user      Users    @relation(fields: [accountId], references: [accountId])
+  guildId   String
+  accountId String   @unique
+  level     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([guildId])
+  @@index([accountId])
+}
+
+model GuildSettings {
+  id                          Int      @id @default(autoincrement())
+  guild                       Guilds   @relation(fields: [guildId], references: [guildId])
+  guildId                     String   @unique
+  afkChannelID                String?
+  afkTimeout                  Int?
+  bannerURL                   String?
+  defaultMessageNotifications String
+  description                 String?  @db.VarChar(130)
+  explicitContentFilter       String
+  iconURL                     String?
+  mfaLevel                    String
+  name                        String
+  nameAcronym                 String
+  ownerID                     String
+  preferredLocale             String
+  rulesChannelID              String?
+  shardID                     Int
+  splashURL                   String?
+  systemChannelID             String?
+  publicUpdatesChannelId      String?
+  vanityURLCode               String?
+  verificationLevel           String
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+
+  @@index([guildId])
+}
+
+model GuildMembers {
+  id                    Int      @id @default(autoincrement())
+  guild                 Guilds   @relation(fields: [guildId], references: [guildId])
+  user                  Users    @relation(fields: [accountId], references: [accountId])
+  guildId               String
+  accountId             String   @unique
+  memberId              String   @unique
+  bannable              Boolean
+  displayColor          Int
+  displayHexColor       String
+  displayName           String?
+  joinedTimestamp       String?
+  kickable              Boolean
+  manageable            Boolean
+  nickname              String?
+  premiumSinceTimestamp Int?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([guildId])
+  @@index([accountId])
+}
+
+model GuildLogs {
+  id              Int      @id @default(autoincrement())
+  guild           Guilds   @relation(fields: [guildId], references: [guildId])
+  guildId         String   @unique
+  delete_log      String?  @unique
+  edit_log        String?  @unique
+  goodbye_log     String?  @unique
+  goodbye_message String?
+  infractions_log String?  @unique
+  join_role       String?  @unique
+  mute_role       String?  @unique
+  welcome_log     String?  @unique
+  welcome_message String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([guildId])
+}
+
+model GuildChannels {
+  id                Int      @id @default(autoincrement())
+  guild             Guilds   @relation(fields: [guildId], references: [guildId])
+  guildId           String
+  channel           Channels @relation(fields: [channelId], references: [channelId])
+  channelId         String   @unique
+  name              String
+  deletable         Boolean
+  manageable        Boolean
+  parentId          String?
+  permissionsLocked Boolean?
+  position          Int?
+  rawPosition       Int
+  viewable          Boolean
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([guildId])
+  @@index([channelId])
+}
+
+model ThreadChannels {
+  id                  Int      @id @default(autoincrement())
+  threadId            String   @unique
+  owner               Users    @relation(fields: [ownerId], references: [accountId])
+  guild               Guilds   @relation(fields: [guildId], references: [guildId])
+  ownerId             String
+  guildId             String   @unique
+  threadName          String
+  archived            Boolean?
+  archivedAt          String?
+  archivedTimestamp   String?
+  autoArchiveDuration Int?
+  createdTimestamp    String
+  editable            Boolean
+  invitable           Boolean?
+  joinable            Boolean
+  joined              Boolean
+  locked              Boolean
+  manageable          Boolean
+  memberCount         Int
+  type                String
+  unarchivable        Boolean
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([guildId])
+}
+
+model ChannelMessages {
+  id        Int      @id @default(autoincrement())
+  message   Messages @relation(fields: [messageId], references: [messageId])
+  channel   Channels @relation(fields: [channelId], references: [channelId])
+  messageId String
+  channelId String
+  channelName String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([messageId])
+  @@index([channelId])
+}
+
+model UserChannels {
+  id        Int      @id @default(autoincrement())
+  user      Users    @relation(fields: [accountId], references: [accountId])
+  channel   Channels @relation(fields: [channelId], references: [channelId])
+  accountId String
+  channelId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([accountId])
+  @@index([channelId])
+}
