@@ -93,11 +93,21 @@ npm install
 | **/warn**             | Warn the mentioned user in a server                                     | < target > [ reason ]            | **3** or **MANAGE_MESSAGES** |
 
 ### Public Commands
-
+| Name            | Description                                                       | Options  |
+|-----------------|-------------------------------------------------------------------|----------|
+| **/botinfo**    | Display information of the client/bot itself                      | NONE     |
+| **/help**       | Returns a message with all of the commands available from the bot | NONE     |
+| **/ping**       | Returns a message with a response time message                    | NONE     |
+| **/serverinfo** | Returns a message with server information                         | NONE     |
+| **/userinfo**   | Display information about the mentioned user in a server          | < user > |
 
 
 
 ### Settings Commands
+| Name     | Description                                 | Options                     | Level or Permission          |
+|----------|---------------------------------------------|-----------------------------|------------------------------|
+| **/add** | This command is to set pre-defined settings | < target >                  | **1** or **ADMINISTRATOR**   |
+| **/set** | This command is to set pre-defined settings | < channel > **or** < role > | **1** or **MANAGE_MESSAGES** |
 
 ## Contributions to this repository
 - Fork this GitHub Repository
