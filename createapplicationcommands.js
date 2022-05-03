@@ -1,7 +1,3 @@
-/**
- * NOT READY FOR USE YET
- */
-
 require('dotenv').config()
 
 const { REST } = require('@discordjs/rest');
