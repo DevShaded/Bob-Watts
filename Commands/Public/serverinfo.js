@@ -2,8 +2,14 @@
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { SlashCommandBuilder } = require('@discordjs/builders');
+
+const data = new SlashCommandBuilder()
+    .setName('serverinfo')
+    .setDescription('Returns a message with server information');
 
 module.exports = {
+    data:        data,
     name:        'serverinfo',
     description: `Returns a message with server information`,
     execute:     async (interaction) => {

@@ -3,7 +3,36 @@
 require('dotenv').config();
 const axios = require('axios');
 
+const { SlashCommandBuilder } = require('@discordjs/builders');
+
+const data = new SlashCommandBuilder()
+    .setName('weather')
+    .setDescription('Get the current weather forecast for a location')
+    .addStringOption(option =>
+        option.setName('location')
+            .setDescription('Choose the location where you want weather forecast from!')
+            .setRequired(true)
+    )
+    .addStringOption(option =>
+        option.setName('units')
+            .setDescription('Your tools use one of the following: rock, paper, scissors')
+            .addChoices({
+                    "name":  'Metric (Celsius)',
+                    "value": "metric"
+                },
+                {
+                    "name":  "Imperial (Fahrenheit)",
+                    "value": "imperial"
+                },
+                {
+                    "name":  "Kelvin",
+                    "value": "kelvin"
+                })
+            .setRequired(true)
+    );
+
 module.exports = {
+    data:        data,
     name:        'weather',
     description: 'Get the current weather forecast for a location',
     execute:     async (interaction) => {

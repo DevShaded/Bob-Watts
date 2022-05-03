@@ -1,6 +1,29 @@
 'use strict';
 
+const { SlashCommandBuilder } = require('@discordjs/builders');
+
+const data = new SlashCommandBuilder()
+    .setName('rps')
+    .setDescription('Game: Rock, Paper, Scissors')
+    .addStringOption(option =>
+        option.setName('tool')
+            .setDescription('Your tools use one of the following: rock, paper, scissors')
+            .addChoices({
+                    "name":  'Rock',
+                    "value": "rock"
+                },
+                {
+                    "name":  "Paper",
+                    "value": "paper"
+                },
+                {
+                    "name":  "Scissors",
+                    "value": "scissors"
+                })
+            .setRequired(true));
+
 module.exports = {
+    data:        data,
     name:        'rps',
     description: `Game: Rock, Paper, Scissors`,
     execute:     async (interaction) => {

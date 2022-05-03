@@ -3,8 +3,14 @@
 const path = require('path');
 const fs = require('fs');
 const { MessageActionRow, MessageButton } = require("discord.js");
+const { SlashCommandBuilder } = require('@discordjs/builders');
+
+const data = new SlashCommandBuilder()
+    .setName('help')
+    .setDescription('Returns a message with all of the commands available from the bot');
 
 module.exports = {
+    data:        data,
     name:        'help',
     description: 'Returns a message with all of the commands available from the bot',
     execute:     async (interaction) => {

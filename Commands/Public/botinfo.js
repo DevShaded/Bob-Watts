@@ -1,10 +1,16 @@
 'use strict';
 
 const { MessageActionRow, MessageButton } = require('discord.js');
+const { SlashCommandBuilder } = require('@discordjs/builders');
 const pm2 = require('pm2');
 const moment = require('moment');
 
+const data = new SlashCommandBuilder()
+    .setName('botinfo')
+    .setDescription('Display information of the client/bot itself');
+
 module.exports = {
+    data:        data,
     name:        'botinfo',
     description: `Display information of the client/bot itself`,
     execute:     async (interaction) => {

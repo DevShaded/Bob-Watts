@@ -1,13 +1,30 @@
 'use strict';
 
 const { Permissions } = require('discord.js');
+const { SlashCommandBuilder } = require('@discordjs/builders');
 const Moderation = require("../../App/Commands/Moderation");
 const VerificationLevel = require('../../App/Commands/VerificationLevel');
 
+const data = new SlashCommandBuilder()
+    .setName('clean')
+    .setDescription('Remove a certain amount of message from a user in the server')
+    .addUserOption(option =>
+        option.setName('target')
+            .setDescription('Choose the user you want to clean messages from your server')
+            .setRequired(true))
+    .addIntegerOption(option =>
+        option.setName('amount')
+            .setDescription('Choose how many messages you want delete from that user')
+            .setRequired(true))
+    .addStringOption(option =>
+        option.setName('reason')
+            .setDescription('Specify a reason why you want to remove messages from this user'));
+
 module.exports = {
-    name: 'clean',
+    data:        data,
+    name:        'clean',
     description: `Remove a certain amount of message from a user in the server`,
-    execute: async (interaction) => {
+    execute:     async (interaction) => {
         // Verify the user if they have enough permissions
         // 1 = Administrator
         // 2 = Moderator
