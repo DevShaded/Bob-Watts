@@ -1,6 +1,13 @@
 'use strict';
 
+const { SlashCommandBuilder } = require('@discordjs/builders');
+
+const data = new SlashCommandBuilder()
+    .setName('ping')
+    .setDescription('Returns a message with a response time message');
+
 module.exports = {
+    data:        data,
     name:        'ping',
     description: 'Returns a message with a response time message',
     execute:     async (interaction) => {

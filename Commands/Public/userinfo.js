@@ -1,8 +1,18 @@
 'use strict';
 
 const moment = require("moment");
+const { SlashCommandBuilder } = require('@discordjs/builders');
+
+const data = new SlashCommandBuilder()
+    .setName('userinfo')
+    .setDescription('Display information about the mentioned user in a server')
+    .addUserOption(option =>
+        option.setName('user')
+            .setDescription('Choose the user you want to get info about!')
+            .setRequired(true));
 
 module.exports = {
+    data:        data,
     name:        'userinfo',
     description: 'Display information about the mentioned user in a server',
     execute:     async (interaction) => {
@@ -93,7 +103,7 @@ module.exports = {
                     inline: false
                 },
             ],
-            timestamp: new Date(),
+            timestamp:   new Date(),
             footer:      {
                 text: interaction.client.user.username
             },

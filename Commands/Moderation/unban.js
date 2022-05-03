@@ -1,13 +1,23 @@
 'use strict';
 
 const { Permissions } = require('discord.js');
+const { SlashCommandBuilder } = require('@discordjs/builders');
 const Moderation = require("../../App/Commands/Moderation");
 const VerificationLevel = require('../../App/Commands/VerificationLevel');
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+const data = new SlashCommandBuilder()
+    .setName('unban')
+    .setDescription('Unban a user that has been banned from your server')
+    .addStringOption(option =>
+        option.setName('target')
+            .setDescription('Enter the UserID from the user that was banned')
+            .setRequired(true));
+
 module.exports = {
+    data:        data,
     name:        'unban',
     description: 'Unban the mentioned user from a server',
     execute:     async (interaction) => {

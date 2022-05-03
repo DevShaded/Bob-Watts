@@ -150,7 +150,7 @@ class Moderation {
             }
         });
 
-        if (!infractionChannel.infractions_log) {
+        if (!infractionChannel) {
             try {
                 const noChannelEmbed = {
                     color:       '#ff9900',
@@ -371,7 +371,7 @@ class Moderation {
         }
 
 
-        if (!infractionChannel.infractions_log) {
+        if (!infractionChannel) {
             try {
                 const successClean = {
                     color:       '#00ff00',
@@ -544,7 +544,7 @@ class Moderation {
                     });
                 }
 
-                if (!infractionChannel.infractions_log) {
+                if (!infractionChannel) {
                     const successCleanInfractions = {
                         color:       '#00ff00',
                         title:       'Successfully removed infractions!',
@@ -690,7 +690,7 @@ class Moderation {
             }
         });
 
-        if (!infractionChannel.infractions_log) {
+        if (!infractionChannel) {
             try {
                 const noChannelEmbed = {
                     color:       '#ff9900',
@@ -876,7 +876,7 @@ class Moderation {
         }
 
 
-        if (!infractionChannel.infractions_log) {
+        if (!infractionChannel) {
             try {
                 const noChannelEmbed = {
                     color:       '#ff9900',
@@ -1160,7 +1160,7 @@ class Moderation {
             }
         });
 
-        if (!infractionChannel.infractions_log) {
+        if (!infractionChannel) {
             try {
                 const noChannelEmbed = {
                     color:       '#ff9900',
@@ -1356,7 +1356,7 @@ class Moderation {
             return this.interaction.reply({ content: `It looks like this user is not muted!`, ephemeral: true });
         }
 
-        if (!infractionChannel.infractions_log) {
+        if (!infractionChannel) {
             try {
                 const noChannelEmbed = {
                     color:       '#ff9900',
@@ -1553,7 +1553,7 @@ class Moderation {
             }
         });
 
-        if (!infractionChannel.infractions_log) {
+        if (!infractionChannel) {
             try {
                 const noChannelEmbed = {
                     color:       '#ff9900',

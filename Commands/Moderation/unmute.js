@@ -2,12 +2,25 @@
 
 const Moderation = require("../../App/Commands/Moderation");
 const { Permissions } = require("discord.js");
+const { SlashCommandBuilder } = require('@discordjs/builders');
 const VerificationLevel = require("../../App/Commands/VerificationLevel");
 
+const data = new SlashCommandBuilder()
+    .setName('unmute')
+    .setDescription('Unmute a member from your server')
+    .addUserOption(option =>
+        option.setName('target')
+            .setDescription('Choose the user you want to unmute from your server')
+            .setRequired(true))
+    .addStringOption(option =>
+        option.setName('reason')
+            .setDescription('Specify a reason why you want to unmute this user'));
+
 module.exports = {
-    name: 'unmute',
+    data:        data,
+    name:        'unmute',
     description: 'Unmute the mentioned user in your server',
-    execute: async (interaction) => {
+    execute:     async (interaction) => {
         // Verify the user if they have enough permissions
         // 1 = Administrator
         // 2 = Moderator
