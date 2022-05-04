@@ -623,6 +623,206 @@ class Actions {
             }
         }
     }
+
+    /**
+     * This method allows you to set a new welcome message for the guild
+     *
+     * @returns {Promise<void>}
+     */
+    async setWelcomeMessage() {
+        const getWelcomeMessage = this.interaction.options.getString('message');
+
+        const getGuildLog = await prisma.GuildLogs.findUnique({
+            where: {
+                guildId: this.interaction.guild.id,
+            },
+        });
+
+        if (!getGuildLog) {
+            try {
+                const successEmbed = {
+                    color:       '#28a745',
+                    title:       'Welcome message setup success!',
+                    description: `Welcome message is ready for use!`,
+                    fields:      [
+                        {
+                            name:  'Current Welcome message',
+                            value: `${getWelcomeMessage}`,
+                        },
+                    ],
+                    timestamp:   new Date(),
+                    footer:      {
+                        text: this.interaction.client.user.username,
+                    },
+                };
+
+                await prisma.GuildLogs.create({
+                    data: {
+                        guildId:         this.interaction.guild.id,
+                        welcome_message: getWelcomeMessage,
+                    }
+                });
+
+                await this.interaction.reply({ embeds: [successEmbed], ephemeral: true });
+            } catch (e) {
+                console.error(e);
+                const failEmbed = {
+                    color:       '#ff0000',
+                    title:       'Welcome message setup did not succeed!',
+                    description: `Welcome message is not ready for use!`,
+                    timestamp:   new Date(),
+                    footer:      {
+                        text: this.interaction.client.user.username,
+                    },
+                };
+
+                await this.interaction.reply({ embeds: [failEmbed], ephemeral: true });
+            }
+        } else {
+            try {
+                const successEmbed = {
+                    color:       '#28a745',
+                    title:       'Welcome message setup success!',
+                    description: `Welcome message is ready for use!`,
+                    fields:      [
+                        {
+                            name:  'Current Welcome message',
+                            value: `${getWelcomeMessage}`,
+                        },
+                    ],
+                    timestamp:   new Date(),
+                    footer:      {
+                        text: this.interaction.client.user.username,
+                    },
+                };
+
+                await prisma.GuildLogs.update({
+                    where: {
+                        guildId: this.interaction.guild.id,
+                    },
+
+                    data: {
+                        welcome_message: getWelcomeMessage,
+                    },
+                });
+
+                await this.interaction.reply({ embeds: [successEmbed], ephemeral: true });
+            } catch (e) {
+                console.error(e);
+                const failEmbed = {
+                    color:       '#ff0000',
+                    title:       'Welcome message setup did not succeed!',
+                    description: `Welcome message is not ready for use!`,
+                    timestamp:   new Date(),
+                    footer:      {
+                        text: this.interaction.client.user.username,
+                    },
+                };
+
+                await this.interaction.reply({ embeds: [failEmbed], ephemeral: true });
+            }
+        }
+    }
+
+    /**
+     * This method allows you to set a new goodbye message for the guild
+     *
+     * @returns {Promise<void>}
+     */
+    async setGoodbyeMessage() {
+        const getGoodbyeMessage = this.interaction.options.getString('message');
+
+        const getGuildLog = await prisma.GuildLogs.findUnique({
+            where: {
+                guildId: this.interaction.guild.id,
+            },
+        });
+
+        if (!getGuildLog) {
+            try {
+                const successEmbed = {
+                    color:       '#28a745',
+                    title:       'Goodbye message setup success!',
+                    description: `Goodbye message is ready for use!`,
+                    fields:      [
+                        {
+                            name:  'Current Goodbye message',
+                            value: `${getGoodbyeMessage}`,
+                        },
+                    ],
+                    timestamp:   new Date(),
+                    footer:      {
+                        text: this.interaction.client.user.username,
+                    },
+                };
+
+                await prisma.GuildLogs.create({
+                    data: {
+                        guildId:         this.interaction.guild.id,
+                        goodbye_message: getGoodbyeMessage,
+                    }
+                });
+
+                await this.interaction.reply({ embeds: [successEmbed], ephemeral: true });
+            } catch (e) {
+                console.error(e);
+                const failEmbed = {
+                    color:       '#ff0000',
+                    title:       'Goodbye message setup did not succeed!',
+                    description: `Goodbye message is not ready for use!`,
+                    timestamp:   new Date(),
+                    footer:      {
+                        text: this.interaction.client.user.username,
+                    },
+                };
+
+                await this.interaction.reply({ embeds: [failEmbed], ephemeral: true });
+            }
+        } else {
+            try {
+                const successEmbed = {
+                    color:       '#28a745',
+                    title:       'Goodbye message setup success!',
+                    description: `Goodbye message is ready for use!`,
+                    fields:      [
+                        {
+                            name:  'Current Goodbye message',
+                            value: `${getGoodbyeMessage}`,
+                        },
+                    ],
+                    timestamp:   new Date(),
+                    footer:      {
+                        text: this.interaction.client.user.username,
+                    },
+                };
+
+                await prisma.GuildLogs.update({
+                    where: {
+                        guildId: this.interaction.guild.id,
+                    },
+
+                    data: {
+                        goodbye_message: getGoodbyeMessage,
+                    },
+                });
+
+                await this.interaction.reply({ embeds: [successEmbed], ephemeral: true });
+            } catch (e) {
+                console.error(e);
+                const failEmbed = {
+                    color:       '#ff0000',
+                    title:       'Goodbye message setup did not succeed!',
+                    description: `Goodbye message is not ready for use!`,
+                    timestamp:   new Date(),
+                    footer:      {
+                        text: this.interaction.client.user.username,
+                    },
+                };
+
+                await this.interaction.reply({ embeds: [failEmbed], ephemeral: true });
+            }
+        }
+    }
 }
 
 module.exports = Actions;

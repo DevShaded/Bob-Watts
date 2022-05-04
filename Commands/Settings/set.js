@@ -47,7 +47,12 @@ const data = new SlashCommandBuilder()
         subcommand
             .setName('welcomemessage')
             .setDescription('Set a custom welcome message for new members in this server')
-            .addStringOption(option => option.setName('message').setDescription('Here you can set the custom message').setRequired(true)));
+            .addStringOption(option => option.setName('message').setDescription('Here you can set the custom message (Custom emojis WILL NOT WORK)').setRequired(true)))
+    .addSubcommand(subcommand =>
+        subcommand
+            .setName('goodbyemessage')
+            .setDescription('Set a custom goodbye message for new members in this server')
+            .addStringOption(option => option.setName('message').setDescription('Here you can set the custom message (Custom emojis WILL NOT WORK)').setRequired(true)));
 
 module.exports = {
     data:        data,
@@ -85,6 +90,12 @@ module.exports = {
                 case 'autorole':
                     await setAction.setAutoRole();
                     break;
+                case 'welcomemessage':
+                    await setAction.setWelcomeMessage();
+                    break;
+                case 'goodbyemessage':
+                    await setAction.setGoodbyeMessage();
+                    break;
             }
         } else {
             let verificationLevel = new VerificationLevel(interaction, 1);
@@ -112,6 +123,12 @@ module.exports = {
                         break;
                     case 'autorole':
                         await setAction.setAutoRole();
+                        break;
+                    case 'welcomemessage':
+                        await setAction.setWelcomeMessage();
+                        break;
+                    case 'goodbyemessage':
+                        await setAction.setGoodbyeMessage();
                         break;
                 }
             } else {
