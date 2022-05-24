@@ -158,12 +158,12 @@ module.exports = {
                 },
                 {
                     name:   `📨 Rules`,
-                    value:  `<#${getGuild['GuildSettings'][0].rulesChannelID ? getGuild['GuildSettings'][0].rulesChannelID : 'Rules channel has not been setup!'}>`,
+                    value:  `${getGuild['GuildSettings'][0].rulesChannelID ? '<#' + getGuild['GuildSettings'][0].rulesChannelID + '>' : 'Rules channel has not been setup!'}`,
                     inline: false,
                 },
                 {
                     name:   `📨 System Channel`,
-                    value:  `<#${getGuild['GuildSettings'][0].systemChannelID ? getGuild['GuildSettings'][0].systemChannelID : 'System Channel has not been setup!'}>`,
+                    value:  `${getGuild['GuildSettings'][0].systemChannelID ? '<#' + getGuild['GuildSettings'][0].systemChannelID + '>' : 'System Channel has not been setup!'}`,
                     inline: false,
                 },
                 {
