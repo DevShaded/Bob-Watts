@@ -1,7 +1,7 @@
 'use strict';
 
 // Require the necessary discord.js classes
-const { Client, Intents, Collection } = require('discord.js');
+const { Client, Intents, Collection, MessageActionRow, MessageButton } = require('discord.js');
 
 // Require dotenv to read the .env file
 require('dotenv').config();
@@ -155,17 +155,27 @@ client.on('messageCreate', async (message) => {
         await messageClass.getMessage();
     }
 
-    const user = await prisma.users.findUnique({
-        where: {
-            accountId: message.author.id,
-        },
+    if (message.content.startsWith('!help')) {
+        const row = new MessageActionRow()
+            .addComponents(
+                new MessageButton()
+                    .setStyle('LINK')
+                    .setURL('https://devshaded.com/bobwatts')
+                    .setLabel('Invite Link'),
+            );
 
-        include: {
-            GuildMembers: true,
-        },
-    });
+        const embed = {
+            color: '#17a2b8',
+            title: 'Announcement',
+            description: 'As of **06/04/2022**, the Bob Watts dev team has decided to remove message commands, and replaced them with slash commands. If you can\'t find any slash commands from Bob Watts, then you need to re-add the bot to the server!',
+            timestamp: new Date(),
+            footer:      {
+                text: client.user.username
+            }
+        };
 
-    console.log(user.accountId);
+        await message.reply({embeds: [embed], components: [row]});
+    }
 });
 
 if (process.env.APP_ENV === 'TRUE') {
