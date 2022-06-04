@@ -104,10 +104,12 @@ npm install
 
 
 ### Settings Commands
-| Name     | Description                                 | Options                     | Level or Permission          |
-|----------|---------------------------------------------|-----------------------------|------------------------------|
-| **/add** | This command is to set pre-defined settings | < target >                  | **1** or **ADMINISTRATOR**   |
-| **/set** | This command is to set pre-defined settings | < channel > **or** < role > | **1** or **ADMINISTRATOR**   |
+| Name        | Description                                 | Options                     | Level or Permission          |
+|-------------|---------------------------------------------|-----------------------------|------------------------------|
+| **/add**    | This command is to set pre-defined settings | < target >                  | **1** or **ADMINISTRATOR**   |
+| **/delete** | This command is to set pre-defined settings | < target >                  | **1** or **ADMINISTRATOR**   |
+| **/remove** | This command is to set pre-defined settings | NONE                        | **1** or **ADMINISTRATOR**   |
+| **/set**    | This command is to set pre-defined settings | < channel > **or** < role > | **1** or **ADMINISTRATOR**   |
 
 ## Contributions to this repository
 - Fork this GitHub Repository
