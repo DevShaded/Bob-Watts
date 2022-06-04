@@ -3,6 +3,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { SlashCommandBuilder } = require('@discordjs/builders');
+const Message = require('../../App/Discord/Message');
 
 const data = new SlashCommandBuilder()
     .setName('serverinfo')
@@ -13,7 +14,22 @@ module.exports = {
     name:        'serverinfo',
     description: `Returns a message with server information`,
     execute:     async (interaction) => {
-        const getGuild = await prisma.guilds.findUnique({
+        let getGuild = await prisma.guilds.findUnique({
+            where: {
+                guildId: interaction.guild.id
+            },
+
+            include: {
+                GuildSettings: true,
+            },
+        });
+
+        if (!getGuild) {
+            const messageClass = new Message(interaction);
+            await messageClass.createGuild();
+        }
+
+        getGuild = await prisma.guilds.findUnique({
             where: {
                 guildId: interaction.guild.id
             },
