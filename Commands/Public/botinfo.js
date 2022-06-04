@@ -44,7 +44,7 @@ module.exports = {
                         .setLabel('Support Server'),
                     new MessageButton()
                         .setStyle('LINK')
-                        .setURL('https://github.com/DevShaded/BobWatts')
+                        .setURL('https://github.com/DevShaded/Bob-Watts')
                         .setLabel('GitHub'),
                     new MessageButton()
                         .setStyle('LINK')

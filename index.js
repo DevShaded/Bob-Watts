@@ -167,7 +167,7 @@ client.on('messageCreate', async (message) => {
         const embed = {
             color: '#17a2b8',
             title: 'Announcement',
-            description: 'As of **06/04/2022**, the Bob Watts dev team has decided to remove message commands, and replaced them with slash commands. If you can\'t find any slash commands from Bob Watts, then you need to re-add the bot to the server!',
+            description: 'As of <t:1654293600:F>, the Bob Watts dev team has decided to remove message commands, and replaced them with slash commands. If you can\'t find any slash commands from Bob Watts, then you need to re-add the bot to the server!',
             timestamp: new Date(),
             footer:      {
                 text: client.user.username
