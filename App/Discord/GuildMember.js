@@ -3,6 +3,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const moment = require('moment');
+const Guild = require("../Discord/Guild");
 
 class GuildMember {
     constructor(member) {
@@ -10,6 +11,19 @@ class GuildMember {
     }
 
     async getGuildMember() {
+        const getGuild = await prisma.guilds.findUnique({
+            where: {
+                guildId: this.member.guild.id
+            }
+        });
+
+        if (!getGuild) {
+            let getGuild = new Guild(this.member.guild);
+            await getGuild.createGuild();
+
+            return this.getGuildMember();
+        }
+
         const getMember = await prisma.users.findUnique({
             where: {
                 accountId: this.member.user.id,
