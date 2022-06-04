@@ -85,7 +85,7 @@ npm install
 |-----------------------|-------------------------------------------------------------------------|----------------------------------|------------------------------|
 | **/ban**              | Ban the mentioned user from a server                                    | < target > [ reason ]            | **2** or **BAN_MEMBERS**     |
 | **/clean**            | Clear a certain amount of infractions of the mentioned user in a server | < target > < amount > [ reason ] | **1** or **MANAGE_MESSAGES** |
-| **/clearinfractions** |                                                                         |                                  |                              |
+| **/clearinfractions** | Clear a certain amount of infractions of the mentioned user in a server | < target > < amount > [ reason ] | **1** or **ADMINISTRATOR**   |
 | **/kick**             | Kick the mentioned user from a server                                   | < target > [ reason ]            | **2** or **KICK_MEMBERS**    |
 | **/mute**             | Mute the mentioned user in your server                                  | < target > [ days ] [ reason ]   | **2** or **MANAGE_MESSAGES** |
 | **/unban**            | Unban the mentioned user from a server                                  | < target >                       | **2** or **BAN_MEMBERS**     |
