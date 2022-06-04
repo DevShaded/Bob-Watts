@@ -18,9 +18,6 @@ module.exports = {
             let pm_uptime = processDescriptionList[0]['pm2_env']['pm_uptime'];
             let restart_time = processDescriptionList[0]['pm2_env']['restart_time'];
             let version = processDescriptionList[0]['pm2_env']['version'];
-            let node_version = processDescriptionList[0]['pm2_env']['node_version'];
-            let memory = (processDescriptionList[0]['monit']['memory'] / 1000000).toFixed(2);
-            let cpu = processDescriptionList[0]['monit']['cpu'];
 
             let now = moment.now();
             let seconds = moment(now).diff(moment(pm_uptime), 'seconds');
