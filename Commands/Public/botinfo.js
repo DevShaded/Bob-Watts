@@ -18,9 +18,6 @@ module.exports = {
             let pm_uptime = processDescriptionList[0]['pm2_env']['pm_uptime'];
             let restart_time = processDescriptionList[0]['pm2_env']['restart_time'];
             let version = processDescriptionList[0]['pm2_env']['version'];
-            let node_version = processDescriptionList[0]['pm2_env']['node_version'];
-            let memory = (processDescriptionList[0]['monit']['memory'] / 1000000).toFixed(2);
-            let cpu = processDescriptionList[0]['monit']['cpu'];
 
             let now = moment.now();
             let seconds = moment(now).diff(moment(pm_uptime), 'seconds');
@@ -56,6 +53,9 @@ module.exports = {
                 );
 
             const serverOwnerEmoji = interaction.client.emojis.cache.get('952556627863683135');
+
+            let clientCreated = interaction.guild.me.user.createdAt;
+            clientCreated = moment(clientCreated).format('YYYY-MM-DD');
 
             const embed = {
                 author:      {
@@ -97,18 +97,18 @@ module.exports = {
                         inline: true,
                     },
                     {
-                        name:   `▶️ Node Version`,
-                        value:  `\`\`\`${node_version}\`\`\``,
+                        name:   `🏓 Latency`,
+                        value:  `\`\`\`${Math.floor(interaction.client.ws.ping).toLocaleString()} milliseconds\`\`\``,
                         inline: true,
                     },
                     {
-                        name:   `💾 Memory`,
-                        value:  `\`\`\`${memory}MB\`\`\``,
+                        name:   `🌍 Region`,
+                        value:  `\`\`\`London, UK\`\`\``,
                         inline: true,
                     },
                     {
-                        name:   `🖥️ CPU`,
-                        value:  `\`\`\`${cpu}%\`\`\``,
+                        name:   `🤖 Bot Creation`,
+                        value:  `\`\`\`${clientCreated}\`\`\``,
                         inline: true,
                     },
                     {
