@@ -15,7 +15,6 @@ module.exports = {
     description: `Display information of the client/bot itself`,
     execute:     async (interaction) => {
         await pm2.describe('Bob Watts', (err, processDescriptionList) => {
-            let name = processDescriptionList[0]['pm2_env']['name'];
             let pm_uptime = processDescriptionList[0]['pm2_env']['pm_uptime'];
             let restart_time = processDescriptionList[0]['pm2_env']['restart_time'];
             let version = processDescriptionList[0]['pm2_env']['version'];
@@ -56,47 +55,65 @@ module.exports = {
                         .setLabel('TOP.GG'),
                 );
 
+            const serverOwnerEmoji = interaction.client.emojis.cache.get('952556627863683135');
+
             const embed = {
                 author:      {
                     name:     'Bot Information',
                     icon_url: `${interaction.guild.me.user.displayAvatarURL()}`,
                 },
                 color:       `#17a2b8`,
-                description: `This bot is being developed by DevShaded#1435.\n\nThis bot is active in **${(interaction.client.guilds.cache.size).toLocaleString()}** Servers and serves **${(interaction.client.users.cache.size).toLocaleString()}** Users.\n\n**Process Information**`,
+                title:       `${interaction.guild.me.user.username} Info`,
+                description: `Bob Watts is a multipurpose bot that does many things, from Fun and Informative commands to Moderation and Logging commands!\n\nBob Watts can be customized with many things like, custom Welcome/Goodbye messages, and moderation logging etc.`,
                 fields:      [
                     {
-                        name:   `Name`,
-                        value:  name.toString(),
+                        name:   `${serverOwnerEmoji} Founder`,
+                        value:  `\`\`\`DevShaded#1435\`\`\``,
                         inline: false,
                     },
                     {
-                        name:   `Uptime`,
-                        value:  secondsToDHMS(seconds),
+                        name:   `📦 Library`,
+                        value:  `\`\`\`Discord.js\`\`\``,
                         inline: true,
                     },
                     {
-                        name:   `Restarts`,
-                        value:  restart_time.toString(),
+                        name:   `📊 Server Count`,
+                        value:  `\`\`\`${(interaction.client.guilds.cache.size).toLocaleString()}\`\`\``,
                         inline: true,
                     },
                     {
-                        name:   `Bot Version`,
-                        value:  version.toString(),
+                        name:   `📊 Member Served`,
+                        value:  `\`\`\`${(interaction.client.users.cache.size).toLocaleString()}\`\`\``,
                         inline: true,
                     },
                     {
-                        name:   `Node Version`,
-                        value:  node_version.toString(),
+                        name:   `🔄 Restarts`,
+                        value:  `\`\`\`${restart_time}\`\`\``,
                         inline: true,
                     },
                     {
-                        name:   `Memory`,
-                        value:  `${memory}MB`,
+                        name:   `▶️ Bot Version`,
+                        value:  `\`\`\`${version}\`\`\``,
                         inline: true,
                     },
                     {
-                        name:   `CPU`,
-                        value:  `${cpu}%`,
+                        name:   `▶️ Node Version`,
+                        value:  `\`\`\`${node_version}\`\`\``,
+                        inline: true,
+                    },
+                    {
+                        name:   `💾 Memory`,
+                        value:  `\`\`\`${memory}MB\`\`\``,
+                        inline: true,
+                    },
+                    {
+                        name:   `🖥️ CPU`,
+                        value:  `\`\`\`${cpu}%\`\`\``,
+                        inline: true,
+                    },
+                    {
+                        name:   `⏱️ Uptime`,
+                        value:  `\`\`\`${secondsToDHMS(seconds)}\`\`\``,
                         inline: true,
                     },
                 ],
