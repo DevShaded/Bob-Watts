@@ -57,6 +57,9 @@ module.exports = {
 
             const serverOwnerEmoji = interaction.client.emojis.cache.get('952556627863683135');
 
+            let clientCreated = interaction.guild.me.user.createdAt;
+            clientCreated = moment(clientCreated).format('YYYY-MM-DD');
+
             const embed = {
                 author:      {
                     name:     'Bot Information',
@@ -97,18 +100,18 @@ module.exports = {
                         inline: true,
                     },
                     {
-                        name:   `▶️ Node Version`,
-                        value:  `\`\`\`${node_version}\`\`\``,
+                        name:   `🏓 Latency`,
+                        value:  `\`\`\`${Math.floor(interaction.client.ws.ping).toLocaleString()} milliseconds\`\`\``,
                         inline: true,
                     },
                     {
-                        name:   `💾 Memory`,
-                        value:  `\`\`\`${memory}MB\`\`\``,
+                        name:   `🌍 Region`,
+                        value:  `\`\`\`London, UK\`\`\``,
                         inline: true,
                     },
                     {
-                        name:   `🖥️ CPU`,
-                        value:  `\`\`\`${cpu}%\`\`\``,
+                        name:   `🤖 Bot Creation`,
+                        value:  `\`\`\`${clientCreated}\`\`\``,
                         inline: true,
                     },
                     {
