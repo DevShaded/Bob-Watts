@@ -28,7 +28,6 @@ const rest = new REST({ versions: '9' }).setToken(process.env.APP_TOKEN);
 
             for (const file of commandFiles) {
                 const command = require('./Commands/' + registerSlashCommandFolder + '/' + file);
-                console.log(command.data)
                 commands.push(command.data);
             }
         }
