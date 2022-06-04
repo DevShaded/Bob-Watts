@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "run": "node index.js",
-    "migrate": "npx prisma migrate dev --name migration"
+    "migrate": "npx prisma migrate dev --name migration",
+    "register": "node createapplicationcommands.js"
   },
   "repository": {
     "type": "git",
