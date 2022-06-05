@@ -28,6 +28,7 @@ jobs:
         passphrase: ${{ secrets.PASSPHRASE }}
         port: 22
         script: |
+          source ~/.nvm/nvm.sh
           nvm use 16
           cd /home/shadedai/Bob-Watts
           git pull origin main
