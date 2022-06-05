@@ -1,4 +1,4 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://cdn.discordapp.com/avatars/661979662997782541/8d24d8bb9bb44411a8d08a798050c481.webp?size=128" alt="Bob Watts Logo"></a></p>
+<p align="center"><img src="https://cdn.discordapp.com/avatars/661979662997782541/8d24d8bb9bb44411a8d08a798050c481.webp?size=128" alt="Bob Watts Logo"></p>
 
 <h1 align="center">Bob Watts</h1>
 <h3 align="center">The open-source multipurpose Discord Bot</h3>
