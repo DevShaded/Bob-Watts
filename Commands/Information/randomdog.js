@@ -13,7 +13,7 @@ module.exports = {
     name:        'randomdog',
     description: 'Get a picture of a random dog',
     execute:     async (interaction) => {
-        let config = {
+        const config = {
             method:  'get',
             url:     `https://dog.ceo/api/breeds/image/random`,
             headers: {}
