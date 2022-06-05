@@ -23,7 +23,7 @@ jobs:
         key: ${{ secrets.PRIVATE_KEY }}
         port: 22
         script: |
-          cd ~/home/danielwetan/Bob-Watts
+          cd ~/home/fredrik/Bob-Watts
           git pull origin main
           git status
           npm install
