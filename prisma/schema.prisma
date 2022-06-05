@@ -182,7 +182,7 @@ model GuildMembers {
   kickable              Boolean
   manageable            Boolean
   nickname              String?
-  premiumSinceTimestamp Int?
+  premiumSinceTimestamp BigInt?  @db.BigInt()
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -260,14 +260,14 @@ model ThreadChannels {
 }
 
 model ChannelMessages {
-  id        Int      @id @default(autoincrement())
-  message   Messages @relation(fields: [messageId], references: [messageId])
-  channel   Channels @relation(fields: [channelId], references: [channelId])
-  messageId String
-  channelId String
+  id          Int      @id @default(autoincrement())
+  message     Messages @relation(fields: [messageId], references: [messageId])
+  channel     Channels @relation(fields: [channelId], references: [channelId])
+  messageId   String
+  channelId   String
   channelName String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([messageId])
   @@index([channelId])
