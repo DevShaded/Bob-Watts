@@ -24,7 +24,7 @@ jobs:
         passphrase: ${{ secrets.PASSPHRASE }}
         port: 22
         script: |
-          cd /Bob-Watts
+          cd ~/home/shadedai/Bob-Watts
           git pull origin main
           git status
           npm install
