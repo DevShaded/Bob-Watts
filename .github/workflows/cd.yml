@@ -28,7 +28,7 @@ jobs:
         passphrase: ${{ secrets.PASSPHRASE }}
         port: 22
         script: |
-          node -v
+          nvm use 16
           cd /home/shadedai/Bob-Watts
           git pull origin main
           git status
