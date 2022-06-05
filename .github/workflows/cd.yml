@@ -15,6 +15,10 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
+      with:
+        node-version: 16
     - name: Deploy using ssh
       uses: appleboy/ssh-action@master
       with:
@@ -24,6 +28,7 @@ jobs:
         passphrase: ${{ secrets.PASSPHRASE }}
         port: 22
         script: |
+          node -v
           cd /home/shadedai/Bob-Watts
           git pull origin main
           git status
