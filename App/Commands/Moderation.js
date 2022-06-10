@@ -81,6 +81,22 @@ class Moderation {
 
                     await this.clearinfractions(violator);
                     break;
+                case 'infractions':
+                    if (violator.id === this.interaction.client.user.id) {
+                        const notBannable = {
+                            color:       '#ff0000',
+                            description: 'Cannot get infractions from this user!',
+                            timestamp:   new Date(),
+                            footer:      {
+                                text: this.interaction.client.user.username,
+                            },
+                        };
+
+                        return this.interaction.reply({ embeds: [notBannable], ephemeral: true });
+                    }
+
+                    await this.infractions(violator);
+                    break;
                 case 'kick':
                     if (!violator.kickable && violator.id === this.interaction.client.user.id) {
                         const notKickable = {
@@ -664,6 +680,69 @@ class Moderation {
             };
 
             await this.interaction.reply({ embeds: [couldNotFindInfraction], ephemeral: true });
+        }
+    };
+
+    /**
+     * Get all the infractions from a user if any
+     * @param violator
+     * @returns {Promise<*>}
+     */
+    async infractions(violator) {
+        const infractions = await prisma.Infractions.findMany({
+            where: {
+                guildId:   this.interaction.guild.id,
+                accountId: violator.id
+            }
+        });
+
+        if (infractions.length > 0) {
+            let infractionsArray = [];
+            let x = 0;
+
+            for (let i = 0; i < infractions.length; i++) {
+                x++;
+                infractionsArray.push(`\`\`\`${infractions[i]['type']}: ${infractions[i]['reason']}\`\`\``);
+            }
+
+            const embed = {
+                color:     '#ff9900',
+                author:    {
+                    name:     `${violator.user.tag}`,
+                    icon_url: violator.displayAvatarURL({ dynamic: true }),
+                },
+                thumbnail: {
+                    url: violator.displayAvatarURL({ dynamic: true }),
+                },
+                fields:    [
+                    {
+                        name:   `Infractions (${x})`,
+                        value:  infractionsArray.join(' '),
+                        inline: false,
+                    },
+                ],
+                timestamp: new Date(),
+                footer:    {
+                    text: this.interaction.client.user.username,
+                }
+            };
+
+            await this.interaction.reply({ embeds: [embed], ephemeral: true });
+        } else {
+            const embed = {
+                author:      {
+                    name:     `${violator.user.tag}`,
+                    icon_url: violator.user.displayAvatarURL(),
+                },
+                color:       '#28a745',
+                description: `<@${violator.id}> has no infractions.`,
+                timestamp:   new Date(),
+                footer:      {
+                    text: this.interaction.client.user.username,
+                }
+            };
+
+            await this.interaction.reply({ embeds: [embed], ephemeral: true });
         }
     };
 
