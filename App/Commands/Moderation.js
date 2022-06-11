@@ -135,6 +135,9 @@ class Moderation {
                 case 'unmute':
                     await this.unmute(violator);
                     break;
+                case 'vckick':
+                    await this.vckick(violator);
+                    break;
                 case 'warn':
                     await this.warn(violator);
                     break;
@@ -1783,6 +1786,220 @@ class Moderation {
 
                 } catch {
                     console.log(`Failed to DM ${violator.tag}`)
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    };
+
+    /**
+     * Vckick a user in the Discord server
+     * @param violator
+     * @returns {Promise<*>}
+     */
+    async vckick(violator) {
+        let defaultReason = 'No reason provided';
+
+        if (this.interaction.options.getString('reason')) {
+            defaultReason = this.interaction.options.getString('reason')
+        }
+
+        const infractionChannel = await prisma.GuildLogs.findUnique({
+            where: {
+                guildId: this.interaction.guild.id,
+            },
+
+            select: {
+                guildId:         true,
+                infractions_log: true,
+            }
+        });
+
+        if (!infractionChannel) {
+            try {
+                const noChannelEmbed = {
+                    color:       '#ff9900',
+                    description: `This user has been kicked from <#${violator.voice.channel.id}>`,
+                    author:      {
+                        name:     `${violator.user.tag}`,
+                        icon_url: violator.displayAvatarURL({ dynamic: true }),
+                    },
+                    thumbnail:   {
+                        url: violator.displayAvatarURL({ dynamic: true }),
+                    },
+                    fields:      [
+                        {
+                            name:   `Issued By`,
+                            value:  `<@${this.interaction.user.id}>`,
+                            inline: false,
+                        },
+                        {
+                            name:   `User ID`,
+                            value:  `${violator.id}`,
+                            inline: true,
+                        },
+                        {
+                            name:   `Reason`,
+                            value:  `${defaultReason}\n`,
+                            inline: false,
+                        },
+                    ],
+                    timestamp:   new Date(),
+                    footer:      {
+                        text: this.interaction.client.user.username,
+                    }
+                };
+
+                if (violator.voice.channel) {
+                    await violator.voice.disconnect(defaultReason)
+                        .then(async () => {
+                            await this.interaction.reply({ embeds: [noChannelEmbed] });
+
+                            await prisma.Infractions.create({
+                                data: {
+                                    guildId:   this.interaction.guild.id,
+                                    accountId: violator.id,
+                                    reason:    defaultReason,
+                                    type:      'vckick',
+                                    expires:   null
+                                }
+                            });
+                        });
+                } else {
+                    const embed = {
+                        color:       '#ff0000',
+                        description: `<@${violator.id}> is not in a voice channel!`,
+                        timestamp:   new Date(),
+                        footer:      {
+                            text: this.interaction.client.user.username,
+                        },
+                    };
+
+                    return this.interaction.reply({ embeds: [embed], ephemeral: true });
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        } else {
+            const joinedServerAtDate = (new Date(violator.joinedAt).getTime() / 1000).toFixed(0);
+            let mChannel = this.interaction.guild.channels.cache.get(infractionChannel.infractions_log);
+
+            if (mChannel === typeof undefined) {
+                const noInfractionChannel = {
+                    color:       '#ff0000',
+                    description: 'I could not find the infraction channel you have setup! Make sure it\'s setup correctly',
+                    timestamp:   new Date(),
+                    footer:      {
+                        text: this.interaction.client.user.username,
+                    },
+                };
+
+                return this.interaction.reply({ embeds: [noInfractionChannel] });
+            }
+
+            try {
+                if (violator.voice.channel) {
+                    const channelEmbed = {
+                        color:       '#ff9900',
+                        description: `This user has been kicked from <#${violator.voice.channel.id}>!`,
+                        author:      {
+                            name:     `${violator.user.tag}`,
+                            icon_url: violator.displayAvatarURL({ dynamic: true }),
+                        },
+                        thumbnail:   {
+                            url: violator.displayAvatarURL({ dynamic: true }),
+                        },
+                        fields:      [
+                            {
+                                name:   `Issued By`,
+                                value:  `<@${this.interaction.user.id}>`,
+                                inline: false,
+                            },
+                            {
+                                name:   `Action`,
+                                value:  'Voice channel kick',
+                                inline: true,
+                            },
+                            {
+                                name:   `User ID`,
+                                value:  `\`${violator.id}\``,
+                                inline: true,
+                            },
+                            {
+                                name:   `Joined At`,
+                                value:  `<t:${joinedServerAtDate}:R>`,
+                                inline: true,
+                            },
+                            {
+                                name:   `Reason`,
+                                value:  `${defaultReason}\n`,
+                                inline: false,
+                            },
+                        ],
+                        timestamp:   new Date(),
+                        footer:      {
+                            text: this.interaction.client.user.username,
+                        }
+                    };
+
+                    const vcKickEmbed = {
+                        color:       '#ff9900',
+                        description: 'That user has been kicked from the voice channel!',
+                        author:      {
+                            name:     `${violator.user.tag}`,
+                            icon_url: violator.displayAvatarURL({ dynamic: true }),
+                        },
+                        timestamp:   new Date(),
+                        footer:      {
+                            text: this.interaction.client.user.username,
+                        }
+                    };
+
+                    await violator.voice.disconnect(defaultReason)
+                        .then(async () => {
+                            await mChannel.send({ embeds: [channelEmbed] });
+
+                            await prisma.Infractions.create({
+                                data: {
+                                    guildId:   this.interaction.guild.id,
+                                    accountId: violator.id,
+                                    reason:    defaultReason,
+                                    type:      'vckick',
+                                    expires:   null
+                                }
+                            });
+
+                            await this.interaction.reply({ embeds: [vcKickEmbed], ephemeral: true });
+
+
+                            try {
+                                const warnDMEmbed = {
+                                    color:       '#ffc107',
+                                    description: `You have been kicked from the voice channel in **${this.interaction.guild.name}** for the following reason(s): \n\n${defaultReason}`,
+                                    timestamp:   new Date(),
+                                    footer:      {
+                                        text: this.interaction.client.user.username,
+                                    },
+                                }
+
+                                await violator.send({ embeds: [warnDMEmbed] })
+
+                            } catch {
+                                console.log(`Failed to DM ${violator.tag}`)
+                            }
+                        });
+                } else {
+                    const embed = {
+                        color:       '#ff0000',
+                        description: `<@${violator.id}> is not in a voice channel!`,
+                        timestamp:   new Date(),
+                        footer:      {
+                            text: this.interaction.client.user.username,
+                        },
+                    };
+
+                    return this.interaction.reply({ embeds: [embed], ephemeral: true });
                 }
             } catch (e) {
                 console.error(e);
