@@ -3,6 +3,7 @@
     "target": "ES2023",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "strict": true,
     "noUncheckedIndexedAccess": true,
@@ -18,5 +19,5 @@
     "outDir": "dist",
     "noEmit": true
   },
-  "include": ["src/**/*.mts", "test/typed/**/*.mts"]
+  "include": ["src/**/*.mts", "test/typed/**/*.mts", "test/production/**/*.mts"]
 }

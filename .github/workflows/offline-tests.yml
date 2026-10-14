@@ -18,6 +18,12 @@ jobs:
                   cache: npm
             - name: Install dependencies and generate Prisma Client
               run: npm ci
+            - name: Build migrated production TypeScript from clean output
+              run: |
+                  test ! -e dist
+                  npm run build:typed
+            - name: Smoke-test production resources before compiling tests
+              run: npm run smoke:typed
             - name: Lint migrated TypeScript sources and tests
               run: npm run lint:typed
             - name: Run offline tests

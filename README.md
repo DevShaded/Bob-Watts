@@ -107,14 +107,24 @@ the remaining behaviors. Ticket #34 owns the complete-project verification
 gate and production cutover; this checkpoint is not a completed bot migration.
 
 ```bash
-npm run typecheck:typed  # src/ and test/typed/ only
+npm run typecheck:typed  # Migrated sources, typed tests, and production smoke harness
 npm run lint:typed       # Type-aware lint for the same maintained TypeScript
 npm run build:typed      # Compile src/*.mts to dist/src/*.mjs
+npm run smoke:typed      # Check production help/botinfo output before compiling tests
 npm run test:typed       # Compile and run the typed offline application tests
 npm test                # Legacy regression suite plus the typed suite
 ```
 
-The existing offline CI workflow also runs `lint:typed`. Compatibility fixtures
+The offline CI workflow requires an absent `dist/`, runs `build:typed`, then
+`smoke:typed` before any test compilation. The smoke harness runs directly under
+Node 24 from `test/production/` against production output, with offline Discord
+fixtures and an unrelated working directory. This checks emitted runtime resources
+without letting the test compiler populate missing artifacts. TypeScript resolves
+`#compiled-application` to source types; Node resolves it to the production build.
+The harness is covered by scoped strict checking and `lint:typed`; emitted tests
+continue to use `tsconfig.test.json`.
+
+The workflow also runs `lint:typed` and `npm test`. Compatibility fixtures
 in `test/typed/fixtures/compatibility.mts` retain every historical database enum
 string and the 18 moderator authorization outcomes checked during this checkpoint.
 The typed suite replays those shared contracts; reuse the fixtures in application

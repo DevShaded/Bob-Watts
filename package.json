@@ -3,6 +3,12 @@
   "version": "3.0.0",
   "description": "A multi purpose bot including fun and epic commands",
   "main": "index.js",
+  "imports": {
+    "#compiled-application": {
+      "types": "./src/application.mts",
+      "default": "./dist/src/application.mjs"
+    }
+  },
   "engines": {
     "node": "24.x"
   },
@@ -18,8 +24,9 @@
     "migrate": "prisma migrate dev --name migration && prisma generate",
     "register": "node createapplicationcommands.js",
     "typecheck:typed": "tsc -p tsconfig.json",
-    "lint:typed": "eslint src test/typed --max-warnings=0",
+    "lint:typed": "eslint src test/typed test/production --max-warnings=0",
     "build:typed": "tsc -p tsconfig.build.json",
+    "smoke:typed": "node test/production/runtime-replies.mts",
     "test:typed": "tsc -p tsconfig.test.json && node --test dist/test/typed/*.test.mjs",
     "test:legacy": "node --test test/*.test.js",
     "test": "npm run test:legacy && npm run test:typed",
