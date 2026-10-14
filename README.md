@@ -97,11 +97,12 @@ initialize the database. The CLI commands still load `.env` and call these
 operations explicitly. Tests invoke them repeatedly with external services
 stubbed, without clearing the CommonJS module cache.
 
-### TypeScript migration checkpoint (#28)
+### TypeScript migration checkpoint (#29)
 
 The integration branch now also contains a strictly checked ESM path in `src/`.
-It currently registers and dispatches **only `/ping`**. The full 30-command
-CommonJS bot remains the operational entrypoint while tickets #29–33 migrate
+It currently registers and dispatches **12 commands**: all eight Fun commands,
+plus `/botinfo`, `/help`, `/ping`, and `/userinfo`. The full 30-command
+CommonJS bot remains the operational entrypoint while tickets #30–33 migrate
 the remaining behaviors. Ticket #34 owns the complete-project verification
 gate and production cutover; this checkpoint is not a completed bot migration.
 
@@ -138,6 +139,31 @@ category metadata in the existing help order; registration and dispatch derive
 names from the actual command definitions. Event contracts check argument
 types and whether a subscription runs once or repeatedly. The Discord adapter
 narrows incoming interactions before dispatch and reports asynchronous errors.
+
+Both typed entrypoints accept `commandRegistry` for explicit composition, with
+the shared registry as their default. Help consumes that same registry's metadata,
+sorted by command name within Fun, Moderation, Public, Settings, Information.
+It retains visibility regardless of permissions or optional configuration.
+Tests supply representative metadata for all 30 commands across the five categories;
+the production registry remains partial until the remaining slices are integrated.
+Empty categories use a nonempty placeholder so checkpoint help replies remain valid.
+
+Bot information imports the package manifest as JSON. TypeScript copies it to
+`dist/package.json`, keeping the compiled relative import valid. Compiled help and
+bot information are tested from outside the repository working directory with no
+credentials or PM2 state.
+
+Focused regressions cover defects corrected in this slice:
+
+- An unresolved slap target now receives the same private response as hug and kiss.
+- User information privately reports missing guilds or uncached members instead of
+  dereferencing them. A missing join date displays `Unknown` instead of `Invalid date`.
+- User information excludes the guild's everyone role by ID, preserving all other
+  roles regardless of cache order; previously it blindly discarded the last role.
+- Bot information uses a crown when the founder emoji is unavailable instead of
+  displaying `undefined`. Unavailable badge emojis still fall back to flag names.
+- Malformed required fortune/game input uses the application failure response
+  instead of displaying `null` or `undefined` in an otherwise successful reply.
 
 Configuration is read only when its owning operation runs:
 

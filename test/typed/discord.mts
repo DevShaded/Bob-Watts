@@ -1,5 +1,5 @@
 import type { InteractionEditReplyOptions, InteractionReplyOptions } from 'discord.js';
-import type { CommandInteraction, Gateway, RegisteredEvent } from '../../src/contracts.mjs';
+import type { CommandInteraction, CommandMember, CommandUser, Gateway, RegisteredEvent } from '../../src/contracts.mjs';
 
 export class OfflineGateway implements Gateway {
     readonly events: RegisteredEvent[] = [];
@@ -39,7 +39,30 @@ export class OfflineGateway implements Gateway {
 
 export class OfflineInteraction implements CommandInteraction {
     commandName = 'ping';
-    client = { ws: { ping: 42 }, user: { username: 'Test bot' } };
+    client = {
+        ws: { ping: 42 },
+        user: {
+            username: 'Test bot', createdAt: new Date(2020, 0, 1),
+            displayAvatarURL: () => 'https://example.com/bot.png',
+        },
+        emojis: { cache: new Map<string, { toString(): string }>() },
+        guilds: { cache: { size: 1234 } }, users: { cache: { size: 5678 } },
+    } satisfies CommandInteraction['client'];
+    user: CommandUser = {
+        id: '123456789012345678', tag: 'Test user',
+        createdTimestamp: Date.UTC(2020, 0, 1),
+        displayAvatarURL: () => 'https://example.com/avatar.png', flags: null,
+    };
+    readonly strings = new Map<string, string>();
+    selectedUser: CommandUser | null = this.user;
+    options = {
+        getString: (name: string): string | null => this.strings.get(name) ?? null,
+        getUser: (): CommandUser | null => this.selectedUser,
+    };
+    readonly members = new Map<string, CommandMember>();
+    guild: CommandInteraction['guild'] = {
+        id: '234567890123456789', members: { cache: this.members },
+    };
     deferred = false;
     replied = false;
     replyFailure: Error | undefined;

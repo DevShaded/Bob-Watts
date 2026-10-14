@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { IntentsBitField, MessageFlags, Partials } from 'discord.js';
+import type { RESTPostAPIChatInputApplicationCommandsJSONBody } from 'discord.js';
 import { registerCommands, startBot } from '../../src/application.mjs';
 import type { RegistrationTransport } from '../../src/contracts.mjs';
 import { OfflineGateway, OfflineInteraction, startupEnvironment } from './discord.mjs';
+import { publicDefinitions } from './fixtures/public-definitions.mjs';
 
-await test('typed registration repeatedly sends the real ping definition to guild and global API v10 routes', async () => {
-    const requests: { route: string; body: unknown }[] = [];
+await test('typed registration repeatedly sends all migrated definitions to guild and global API v10 routes', async () => {
+    const requests: { route: string; body: readonly RESTPostAPIChatInputApplicationCommandsJSONBody[] }[] = [];
     const transport: RegistrationTransport = {
         put: (route, options) => {
             requests.push({ route, body: options.body });
@@ -29,14 +31,16 @@ await test('typed registration repeatedly sends the real ping definition to guil
         '/applications/123/guilds/456/commands', '/applications/123/commands',
         '/applications/123/guilds/456/commands', '/applications/123/commands',
     ]);
-    const expected = [{
-        name: 'ping', description: 'Returns a message with a response time message',
-        options: [], type: 1,
-    }];
     for (const request of requests) {
+        const names = request.body.map(definition => definition.name);
+        assert.deepEqual(names.slice().sort(), [
+            '8ball', 'botinfo', 'coinflip', 'cookie', 'diceroll', 'help',
+            'hug', 'kiss', 'ping', 'rps', 'slap', 'userinfo',
+        ]);
+        assert.equal(new Set(names).size, 12);
         // Discord omits undefined optional fields when sending JSON.
         const serialized: unknown = JSON.parse(JSON.stringify(request.body));
-        assert.deepEqual(serialized, expected);
+        assert.deepEqual(serialized, publicDefinitions);
     }
 });
 

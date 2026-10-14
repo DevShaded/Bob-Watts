@@ -3,6 +3,8 @@ import type {
     InteractionEditReplyOptions,
     InteractionReplyOptions,
     RESTPostAPIChatInputApplicationCommandsJSONBody,
+    User,
+    UserFlagsBitField,
 } from 'discord.js';
 
 export type CommandCategory = 'Fun' | 'Moderation' | 'Public' | 'Settings' | 'Information';
@@ -11,14 +13,39 @@ export const commandCategories: readonly CommandCategory[] = [
     'Fun', 'Moderation', 'Public', 'Settings', 'Information',
 ];
 
+export type CommandUser = Pick<User, 'id' | 'tag' | 'createdTimestamp' | 'displayAvatarURL'> & {
+    readonly flags: Pick<UserFlagsBitField, 'toArray'> | null;
+};
+
+export interface CommandMember {
+    readonly user: CommandUser;
+    readonly joinedAt: Date | null;
+    readonly roles: {
+        readonly cache: ReadonlyMap<string, { readonly id: string }>;
+        readonly highest: { readonly id: string; readonly name: string };
+    };
+}
+
 // Only the Discord capabilities consumed by the migrated commands belong here.
 // Extend this boundary as subsequent behavior slices join the registry.
 export interface CommandInteraction {
     readonly commandName: string;
     readonly client: {
         readonly ws: { readonly ping: number };
-        readonly user: { readonly username: string } | null;
+        readonly user: Pick<User, 'username' | 'createdAt' | 'displayAvatarURL'> | null;
+        readonly emojis: { readonly cache: ReadonlyMap<string, { toString(): string }> };
+        readonly guilds: { readonly cache: { readonly size: number } };
+        readonly users: { readonly cache: { readonly size: number } };
     };
+    readonly user: CommandUser;
+    readonly options: {
+        getString(name: string): string | null;
+        getUser(name: string): CommandUser | null;
+    };
+    readonly guild: {
+        readonly id: string;
+        readonly members: { readonly cache: ReadonlyMap<string, CommandMember> };
+    } | null;
     readonly deferred: boolean;
     readonly replied: boolean;
     reply(options: InteractionReplyOptions): Promise<unknown>;
@@ -26,10 +53,15 @@ export interface CommandInteraction {
     followUp(options: InteractionReplyOptions): Promise<unknown>;
 }
 
-export interface Command {
+export interface CommandMetadata {
     readonly category: CommandCategory;
     readonly data: { toJSON(): RESTPostAPIChatInputApplicationCommandsJSONBody };
-    execute(interaction: CommandInteraction): Promise<void>;
+}
+
+export interface Command extends CommandMetadata {
+    execute(interaction: CommandInteraction, context: {
+        readonly commands: readonly CommandMetadata[];
+    }): Promise<void>;
 }
 
 // Event names match Discord. Non-chat-input interactions carry no command.
