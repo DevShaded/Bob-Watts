@@ -97,6 +97,60 @@ initialize the database. The CLI commands still load `.env` and call these
 operations explicitly. Tests invoke them repeatedly with external services
 stubbed, without clearing the CommonJS module cache.
 
+### TypeScript migration checkpoint (#28)
+
+The integration branch now also contains a strictly checked ESM path in `src/`.
+It currently registers and dispatches **only `/ping`**. The full 30-command
+CommonJS bot remains the operational entrypoint while tickets #29–33 migrate
+the remaining behaviors. Ticket #34 owns the complete-project verification
+gate and production cutover; this checkpoint is not a completed bot migration.
+
+```bash
+npm run typecheck:typed  # src/ and test/typed/ only
+npm run lint:typed       # Type-aware lint for the same maintained TypeScript
+npm run build:typed      # Compile src/*.mts to dist/src/*.mjs
+npm run test:typed       # Compile and run the typed offline application tests
+npm test                # Legacy regression suite plus the typed suite
+```
+
+Node 24 runs the emitted ES modules; generated files stay in ignored `dist/`.
+The temporary `.mts`/`.mjs` boundary lets the legacy CommonJS files coexist
+without changing their loader. Type checking includes tests, strict null and
+indexed-access checks, and exact optional properties. Type-aware lint prohibits
+unsafe assignments, assertions, suppression comments, and inline rule disabling.
+These are scoped checks, not a claim that legacy JavaScript is type safe.
+
+`dist/src/application.mjs` exports callable `startBot(options)` and
+`registerCommands(options)`. Their default collaborators use Discord.js; the
+offline tests supply narrow gateway and REST interfaces instead. **Do not use
+this partial registry for live registration:** Discord replaces the command
+list with its payload. Continue using the existing launch and registration
+commands until the final integration ticket.
+
+`src/registry.mts` explicitly composes commands and events. Commands carry
+category metadata in the existing help order; registration and dispatch derive
+names from the actual command definitions. Event contracts check argument
+types and whether a subscription runs once or repeatedly. The Discord adapter
+narrows incoming interactions before dispatch and reports asynchronous errors.
+
+Configuration is read only when its owning operation runs:
+
+| Operation | Required configuration |
+| --- | --- |
+| Typed startup | `APP_ENV`, `APP_TOKEN`, `DATABASE_URL`, `APP_GUILD_ID`, `APP_CHANNEL_ID` |
+| Typed registration | `APP_ENV`, `APP_TOKEN`, `APP_CLIENT_ID`; `APP_GUILD_ID` in development |
+| Setup configuration contract | `DATABASE_URL`; missing Discord settings are reported without authentication |
+| Definition imports, dependency installation, Prisma generation | No environment file or credentials |
+
+`APP_ENV` accepts `development` or `production`. Weather credentials remain
+optional. The shared database factory creates a client only when called; its
+owning operation must share that client and disconnect it when finished.
+Typed database enum mappings retain the historical stored strings, and
+moderator verification retains the level comparison (administrator 1,
+moderator 2, soft moderator 3). Their existing consumers remain assigned to
+the later migration tickets, including Discord permission checks and database
+activity at startup. No schema migration is needed for this checkpoint.
+
 As of October 14, 2026, the runtime dependency audit reports zero vulnerabilities.
 The full audit reports three high findings along the optional PM2 dependency
 chain `pm2 > chokidar > braces`, caused by the same

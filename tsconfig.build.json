@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "noEmitOnError": true,
+    "sourceMap": true
+  },
+  "include": ["src/**/*.mts"]
+}
