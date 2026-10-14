@@ -4,6 +4,7 @@ const { MessageFlags } = require('discord.js');
 
 const moment = require("moment");
 const prisma = require('../Database');
+const databaseEnums = require('../Discord/databaseEnums');
 
 class Moderator {
     constructor(interaction) {
@@ -651,7 +652,7 @@ class Moderator {
                 memberCount:              this.interaction.guild.memberCount,
                 partnered:                this.interaction.guild.partnered,
                 premiumSubscriptionCount: this.interaction.guild.premiumSubscriptionCount,
-                premiumTier:              this.interaction.guild.premiumTier,
+                premiumTier:              databaseEnums.premiumTier[this.interaction.guild.premiumTier],
                 verified:                 this.interaction.guild.verified,
 
                 GuildSettings: {
@@ -659,11 +660,11 @@ class Moderator {
                         afkChannelID:                this.interaction.guild.afkChannelId,
                         afkTimeout:                  this.interaction.guild.afkTimeout,
                         bannerURL:                   this.interaction.guild.bannerURL({ forceStatic: false }),
-                        defaultMessageNotifications: this.interaction.guild.defaultMessageNotifications,
+                        defaultMessageNotifications: databaseEnums.defaultMessageNotifications[this.interaction.guild.defaultMessageNotifications],
                         description:                 this.interaction.guild.description,
-                        explicitContentFilter:       this.interaction.guild.explicitContentFilter,
+                        explicitContentFilter:       databaseEnums.explicitContentFilter[this.interaction.guild.explicitContentFilter],
                         iconURL:                     this.interaction.guild.iconURL({ forceStatic: false }),
-                        mfaLevel:                    this.interaction.guild.mfaLevel,
+                        mfaLevel:                    databaseEnums.mfaLevel[this.interaction.guild.mfaLevel],
                         name:                        this.interaction.guild.name,
                         nameAcronym:                 this.interaction.guild.nameAcronym,
                         ownerID:                     this.interaction.guild.ownerId,
@@ -674,7 +675,7 @@ class Moderator {
                         systemChannelID:             this.interaction.guild.systemChannelId,
                         publicUpdatesChannelId:      this.interaction.guild.publicUpdatesChannelId,
                         vanityURLCode:               this.interaction.guild.vanityURLCode,
-                        verificationLevel:           this.interaction.guild.verificationLevel
+                        verificationLevel:           databaseEnums.verificationLevel[this.interaction.guild.verificationLevel]
                     }
                 }
             }

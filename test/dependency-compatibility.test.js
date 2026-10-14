@@ -199,12 +199,17 @@ test('guild and channel writes preserve existing database enum strings', async t
     };
     const Guild = require('../App/Discord/Guild');
     const Message = require('../App/Discord/Message');
+    const Moderator = require('../App/Commands/Moderator');
     for (const model of [new Guild(guild), new Message({ guild })]) {
         await model.createGuild();
         await model.updateGuild();
     }
+    await new Moderator({ guild }).createGuild();
     for (const call of create.mock.calls) {
         assert.equal(call.arguments[0].data.premiumTier, 'TIER_2');
+        assert.equal(call.arguments[0].data.GuildSettings.create.defaultMessageNotifications, 'ONLY_MENTIONS');
+        assert.equal(call.arguments[0].data.GuildSettings.create.explicitContentFilter, 'ALL_MEMBERS');
+        assert.equal(call.arguments[0].data.GuildSettings.create.mfaLevel, 'ELEVATED');
         assert.equal(call.arguments[0].data.GuildSettings.create.verificationLevel, 'VERY_HIGH');
     }
     for (const call of update.mock.calls) assert.equal(call.arguments[0].data.premiumTier, 'TIER_2');
