@@ -113,6 +113,12 @@ npm run test:typed       # Compile and run the typed offline application tests
 npm test                # Legacy regression suite plus the typed suite
 ```
 
+The existing offline CI workflow also runs `lint:typed`. Compatibility fixtures
+in `test/typed/fixtures/compatibility.mts` retain every historical database enum
+string and the 18 moderator authorization outcomes checked during this checkpoint.
+The typed suite replays those shared contracts; reuse the fixtures in application
+tests when tickets #31–33 migrate their consumers.
+
 Node 24 runs the emitted ES modules; generated files stay in ignored `dist/`.
 The temporary `.mts`/`.mjs` boundary lets the legacy CommonJS files coexist
 without changing their loader. Type checking includes tests, strict null and
