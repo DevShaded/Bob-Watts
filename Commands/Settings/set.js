@@ -2,8 +2,7 @@
 
 const VerificationLevel = require('../../App/Commands/VerificationLevel');
 const Action = require('../../App/Commands/Actions');
-const { Permissions } = require("discord.js");
-const { SlashCommandBuilder } = require('@discordjs/builders');
+const { PermissionFlagsBits, MessageFlags, SlashCommandBuilder } = require('discord.js');
 
 const data = new SlashCommandBuilder()
     .setName('set')
@@ -67,7 +66,7 @@ module.exports = {
         let setAction = new Action(interaction);
 
         // If the user have enough permissions, continue
-        if (executor.permissions.has(Permissions.FLAGS.ADMINISTRATOR)) {
+        if (executor.permissions.has(PermissionFlagsBits.Administrator)) {
             switch (interaction.options.getSubcommand()) {
                 case 'joinchannel':
                     await setAction.setJoinChannel();
@@ -135,7 +134,7 @@ module.exports = {
                 // If the user does have not enough permissions, return message with no permissions
                 return interaction.reply({
                     content:   'You dont have **ADMINISTRATOR** permission enabled, so you can\'t run this command!',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
         }

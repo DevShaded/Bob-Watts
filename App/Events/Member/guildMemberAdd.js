@@ -1,8 +1,7 @@
 'use strict';
 
 const GuildMember = require("../../Discord/GuildMember");
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../../Database');
 
 module.exports = {
     name:    'guildMemberAdd',
@@ -14,7 +13,7 @@ module.exports = {
                 await guildClass.getGuildMember();
 
                 let welcomeMessage;
-                welcomeMessage = await prisma.GuildLogs.findUnique({
+                welcomeMessage = await prisma.guildLogs.findUnique({
                     where: {
                         guildId: member.guild.id
                     },
@@ -36,13 +35,13 @@ module.exports = {
                 }
 
                 const embed = {
-                    color:       '#28a745',
+                    color:       0x28a745,
                     author:      {
                         name:     `${member.user.tag} (${member.user.id})`,
                         icon_url: member.user.displayAvatarURL(),
                     },
                     description: `${welcomeMessage}`,
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: 'Bob Watts',
                     }
@@ -50,7 +49,7 @@ module.exports = {
 
                 await iChannel.send({ embeds: [embed] });
 
-                const role = await prisma.GuildLogs.findUnique({
+                const role = await prisma.guildLogs.findUnique({
                     where: {
                         guildId: member.guild.id,
                     },

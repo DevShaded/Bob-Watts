@@ -1,8 +1,7 @@
 'use strict';
 
 const GuildMember = require("../../Discord/GuildMember");
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../../Database');
 
 module.exports = {
     name:    'guildMemberRemove',
@@ -14,7 +13,7 @@ module.exports = {
                 await guildClass.deleteGuildMember();
 
                 let leaveMessage;
-                leaveMessage = await prisma.GuildLogs.findUnique({
+                leaveMessage = await prisma.guildLogs.findUnique({
                     where: {
                         guildId: member.guild.id
                     },
@@ -36,13 +35,13 @@ module.exports = {
                 }
 
                 const embed = {
-                    color:       '#dc3545',
+                    color:       0xdc3545,
                     author:      {
                         name:     `${member.user.tag} (${member.user.id})`,
                         icon_url: member.user.displayAvatarURL(),
                     },
                     description: `${leaveMessage}`,
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: 'Bob Watts',
                     }

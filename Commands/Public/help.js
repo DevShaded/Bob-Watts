@@ -2,8 +2,7 @@
 
 const path = require('path');
 const fs = require('fs');
-const { MessageActionRow, MessageButton } = require("discord.js");
-const { SlashCommandBuilder } = require('@discordjs/builders');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
 
 const data = new SlashCommandBuilder()
     .setName('help')
@@ -53,10 +52,10 @@ module.exports = {
             command = path.parse(settingsCommands[i]);
             settingsCommandsList.push(`\`/${command.name}\``);
         }
-        const row = new MessageActionRow()
+        const row = new ActionRowBuilder()
             .addComponents(
-                new MessageButton()
-                    .setStyle('LINK')
+                new ButtonBuilder()
+                    .setStyle(ButtonStyle.Link)
                     .setURL('https://discord.gg/jfCv4XAfHA')
                     .setLabel('Support Server'),
             );
@@ -64,7 +63,7 @@ module.exports = {
 
         const embed = {
             title:       'Bot Commands',
-            color:       `#17a2b8`,
+            color:       0x17a2b8,
             description: 'Here are all of the commands that are available from Bob Watts!',
             fields:      [
                 {
@@ -98,7 +97,7 @@ module.exports = {
                     inline: true
                 },
             ],
-            timestamp:   new Date(),
+            timestamp:   new Date().toISOString(),
             footer:      {
                 text: interaction.client.user.username,
             }

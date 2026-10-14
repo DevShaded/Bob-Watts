@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder } = require("@discordjs/builders");
+const { SlashCommandBuilder } = require('discord.js');
 
 const data = new SlashCommandBuilder()
     .setName('diceroll')
@@ -23,7 +23,7 @@ module.exports = {
         let answer = diceArray[Math.floor(Math.random() * diceArray.length)];
 
         const embed = {
-            color:       '#17a2b8',
+            color:       0x17a2b8,
             description: `🎲 I threw a dice and it turned out to be **${answer}**`,
         };
 

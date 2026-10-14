@@ -1,8 +1,7 @@
 'use strict';
 
 const axios = require('axios');
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { MessageActionRow, MessageButton } = require("discord.js");
+const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 const data = new SlashCommandBuilder()
     .setName('randomcat')
@@ -23,21 +22,21 @@ module.exports = {
             .then(async (response) => {
                 const imageUrl = response.data[0].url;
 
-                const row = new MessageActionRow()
+                const row = new ActionRowBuilder()
                     .addComponents(
-                        new MessageButton()
-                            .setStyle('LINK')
+                        new ButtonBuilder()
+                            .setStyle(ButtonStyle.Link)
                             .setURL(`${imageUrl}`)
                             .setLabel('🖼️ Open Original Image'),
                     );
 
                 const embed = {
-                    color:     '#17a2b8',
+                    color:     0x17a2b8,
                     title:     'Here is a picture of a random cat!',
                     image:     {
                         url: `${imageUrl}`,
                     },
-                    timestamp: new Date(),
+                    timestamp: new Date().toISOString(),
                     footer:    {
                         text: interaction.client.user.username,
                     },
@@ -48,10 +47,10 @@ module.exports = {
             .catch(async (error) => {
                 console.error(error.response.data);
                 const embed = {
-                    color:       '#ff0000',
+                    color:       0xff0000,
                     title:       'Something wrong is going on!',
                     description: `Error code: \`${error.response.status} ${error.response.statusText}\` `,
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: interaction.client.user.username,
                     },

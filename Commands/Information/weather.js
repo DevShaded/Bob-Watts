@@ -1,9 +1,9 @@
 'use strict';
 
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
 const axios = require('axios');
 
-const { SlashCommandBuilder } = require('@discordjs/builders');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 
 const data = new SlashCommandBuilder()
     .setName('weather')
@@ -70,7 +70,7 @@ module.exports = {
                 weatherDescription = weatherDescription.charAt(0).toUpperCase() + weatherDescription.slice(1);
 
                 const weatherEmbed = {
-                    color:       '#17a2b8',
+                    color:       0x17a2b8,
                     title:       `${response.data.name}, ${response.data.sys['country']}`,
                     description: `Here is the weather forecast for ${response.data.name}. [Full Forecast](https://openweathermap.org/city/${response.data.id})`,
                     thumbnail:   {
@@ -108,7 +108,7 @@ module.exports = {
                             inline: true
                         },
                     ],
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: interaction.client.user.username
                     }
@@ -120,14 +120,14 @@ module.exports = {
             .catch(async (error) => {
                 console.log(error)
                 const errorEmbed = {
-                    color:       '#ff0000',
+                    color:       0xff0000,
                     description: `Looks like something is wrong!`,
                     footer:      {
                         text: `Error message: ${error.response.data.cod} ${error.response.data.message}`
                     }
                 }
 
-                await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+                await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
             });
 
     },

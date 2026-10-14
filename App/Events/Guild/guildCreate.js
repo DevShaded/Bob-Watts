@@ -18,9 +18,9 @@ module.exports = {
                 const messageChannel = messageGuild.channels.cache.get(channelId);
 
                 const embed = {
-                    color:       '#28a745',
+                    color:       0x28a745,
                     description: `I have joined **${guild.name}**`,
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: guild.client.user.username,
                     },

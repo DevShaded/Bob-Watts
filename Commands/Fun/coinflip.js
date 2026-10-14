@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder } = require("@discordjs/builders");
+const { SlashCommandBuilder } = require('discord.js');
 
 const data = new SlashCommandBuilder()
     .setName('coinflip')
@@ -20,7 +20,7 @@ module.exports = {
         let coin = coinArray[Math.floor(Math.random() * coinArray.length)];
 
         const embed = {
-            color:       '#17a2b8',
+            color:       0x17a2b8,
             description: `<:coin:620255307284742154> I flipped a coin and it landed on **${coin}**`,
         };
 

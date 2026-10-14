@@ -32,34 +32,150 @@ By using Bob Watts services you agree that we store certain data in our database
 - Messages **FOR ONLY MODERATION ONLY**;
 - Moderation's* like: **Admins, Moderators, Kicks, Bans, Warns and Mutes**;
 
-## Requirements for hosting own use of Bot
-```
-- MySQL Server
-- Node v16x or above
-- PM2 5x or adove
+## Local development setup
+
+Requirements: Node.js 24, npm, and Docker with Docker Compose. The bot runs on
+Node.js; MySQL runs in Docker. No separate MySQL installation is needed.
+
+From the repository directory:
+
+```bash
+# If you use nvm:
+nvm install
+nvm use
+
+npm ci
+# On the first setup only; keep an existing .env file:
+cp -n .env.example .env
+chmod 600 .env
+npm run db:up
+npm run db:setup
+npm run check
 ```
 
-## Setup for hosting the bot
-If you have all the requirements for hosting the bot, please follow the next step carefully!
+`db:up` waits for MySQL to become healthy. `db:setup` applies the checked-in
+migrations and generates Prisma Client. `check` validates the Prisma schema,
+loads every slash command and event module, and queries every database model.
+It works before Discord credentials are added and does not contact Discord.
+These checks do not exercise command execution against a live Discord server.
 
-1. Clone this repository to your local computer, or to your VPS
-```
-git clone https://github.com/DevShaded/BobWatts.git
-```
-4. Download the NPM dependencies with
-```
-npm install
-```
-5. Copy the contents of the `.env-example` file and make a new file called `.env` and paste the contents from the `.env-example` into to the `.env`
-    * You have to fill out every environment variable's in the `.env` file to make the bot work properly
-6. Create a new database in your MySQL server with a collation of `utf8mb4_unicode_ci`
-7. Run the `npm run migrate` command to create the tables in your database
-8. Once you have done every step above, you can start the bot with the PM2 command `pm2 start ecosystem.config.js` file
-    * To check for any error's made from the bot run "pm2 logs Bob-Watts"
-9. If you have no error's you should be done!
+The bot uses Discord.js 14.27, Prisma 7.10, Axios 1.20, dotenv 18, Moment 2.31,
+and optional PM2 7. Prisma CLI, Client, and the MariaDB adapter are pinned to
+the same stable release; Prisma 8 is currently a release candidate.
 
-### First Time Usage
-**COMING SOON**
+The [Discord.js v14 migration](https://discordjs-guide.netlify.app/additional-info/changes-in-v14)
+uses API v10, current builders, numeric permissions and gateway intents, and
+API-compatible embed payloads. Stored guild and channel enum strings retain
+their previous format, so existing data does not need conversion.
+
+The [Prisma 7 migration](https://www.prisma.io/docs/guides/upgrade-prisma-orm/v7)
+moves the CLI connection URL to `prisma.config.js` and uses one shared MariaDB
+adapter for the bot's MySQL connection pool. The JavaScript client generator is
+retained for this CommonJS codebase. `npm ci` generates the client automatically,
+even before `.env` exists. The database tables and migration history are unchanged.
+For hosted connections, review the MariaDB driver's connection options: Prisma 6
+URL options such as `connection_limit` are now driver options such as `connectionLimit`.
+
+### Upgrade verification
+
+```bash
+npm test                 # Offline compatibility tests; no Discord or database calls
+npm run check            # Validate commands, events, schema, and database queries
+npm audit --omit=dev     # Audit runtime dependencies
+npm audit               # Include development tools such as PM2
+```
+
+Tests exercise command payloads, permissions, ban history deletion, stored enum
+values, startup, and command registration with mocked network/database calls.
+Live command execution still needs a test Discord server.
+
+As of October 14, 2026, the runtime dependency audit reports zero vulnerabilities.
+The full audit reports three high findings along the optional PM2 dependency
+chain `pm2 > chokidar > braces`, caused by the same
+[unpatched braces advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm).
+Targeted overrides select patched MariaDB, MySQL2, deepmerge-ts, basic-ftp, and
+js-yaml versions while their parent packages still select vulnerable releases.
+Review those overrides when updating their parent packages. Avoid `npm audit fix
+--force`, which currently proposes downgrading major packages.
+
+### Docker database
+
+The [MySQL image](https://hub.docker.com/_/mysql) runs on `127.0.0.1:3307` using
+database `bobwattsv3`. The development credentials in `.env.example` match
+`compose.yaml`. If port 3307 is occupied, change both `MYSQL_PORT` and the port
+in `DATABASE_URL` in `.env`. These credentials are for local development only.
+
+```bash
+npm run db:up             # Start MySQL and wait for readiness
+docker compose ps        # Show database status
+docker compose logs mysql
+npm run db:down           # Stop/remove the container; retain database data
+```
+
+Data persists in Docker's `mysql-data` volume between container restarts.
+`docker compose down -v` deletes that data. Changing `MYSQL_ROOT_PASSWORD` in
+`.env` does not change the password inside an already initialized volume.
+
+For later schema changes, use `npm run migrate` and commit the generated
+`prisma/migrations` files. Run `npm run db:setup` to apply existing migrations.
+The initial migration is for a new database; an existing installation needs
+[baselining](https://www.prisma.io/docs/orm/prisma-migrate/workflows/baselining)
+before using this migration history.
+
+### Discord configuration
+
+Use a test bot and server for development. Fill these values in the ignored
+`.env` file:
+
+| Variable | Value |
+| --- | --- |
+| `APP_ENV` | Keep `development` to register commands only in the test server. |
+| `APP_TOKEN` | Bot token from the application's **Bot** page in the [Developer Portal](https://discord.com/developers/applications). |
+| `APP_CLIENT_ID` | Application ID from **General Information**. |
+| `APP_GUILD_ID` | Test server ID; also used for the bot's operational logs. |
+| `APP_CHANNEL_ID` | Text channel ID in that server for join/leave/update logs. |
+| `APP_WEATHER_API` | Optional OpenWeather API key, needed only by `/weather`. |
+
+Enable **Server Members Intent**, **Presence Intent**, and **Message Content
+Intent** on the application's Bot page. Message content is used by the existing
+message logging and `!help` handler. The client requests these
+[privileged intents](https://docs.discord.com/developers/events/gateway#privileged-intents).
+In Discord, enable **Developer Mode** under **User Settings > Advanced** to copy
+server and channel IDs.
+
+To invite the bot, open the application's **Installation** page, enable
+**Guild Install**, and select **Discord Provided Link** under **Install Link**.
+Under **Default Install Settings > Guild Install**, select the `bot` and
+`applications.commands` scopes. The legacy bot expects Administrator for its
+full moderation feature set; use a dedicated test server. Copy the install link,
+open it, choose **Add to server**, and select your test server. You need
+**Manage Server** permission to install it there. See Discord's
+[installation guide](https://docs.discord.com/developers/quick-start/getting-started#adding-scopes-and-bot-permissions).
+
+In **Server Settings > Roles**, place the bot's role above roles and members it
+must manage. Administrator does not bypass Discord's
+[role hierarchy](https://docs.discord.com/developers/topics/permissions#permission-hierarchy).
+
+Register the slash commands, then start the bot:
+
+```bash
+npm run register
+npm start
+```
+
+Use `/ping` in the test server to check a live response. `npm run dev` starts
+Node's watch mode for development. Stop either foreground process with Ctrl+C.
+Changing `APP_ENV` to `production` makes `npm run register` replace the
+application's global command list.
+
+`/botinfo` reads version and uptime directly from the running Node process.
+PM2 is optional. To use it, stop the foreground bot first:
+
+```bash
+npx pm2 start ecosystem.config.js
+npx pm2 logs "Bob Watts"
+npx pm2 stop "Bob Watts"
+```
 
 ## Commands
 

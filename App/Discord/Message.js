@@ -1,8 +1,8 @@
 'use strict';
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../Database');
 const moment = require('moment');
+const databaseEnums = require('./databaseEnums');
 
 /**
  * This class is based for maintaining Discord messages
@@ -51,7 +51,7 @@ class Message {
         }
 
         // Try to get the Guild Member from the Database
-        const getGuildMember = await prisma.GuildMembers.findUnique({
+        const getGuildMember = await prisma.guildMembers.findUnique({
             where: {
                 memberId: this.message.member.id
             }
@@ -68,7 +68,7 @@ class Message {
         // Check if the channel is not a thread
         if (!this.message.channel.isThread()) {
             // Get the channel from the Database
-            const getChannel = await prisma.Channels.findUnique({
+            const getChannel = await prisma.channels.findUnique({
                 where: {
                     channelId: this.message.channel.id
                 },
@@ -83,7 +83,7 @@ class Message {
             }
 
             // Get the guild channel from the Database
-            const getGuildChannel = await prisma.GuildChannels.findFirst({
+            const getGuildChannel = await prisma.guildChannels.findFirst({
                 where: {
                     channelId: this.message.channel.id
                 },
@@ -98,7 +98,7 @@ class Message {
             }
         } else {
             // Get the thread channel from the Database
-            const getThreadChannel = await prisma.ThreadChannels.findUnique({
+            const getThreadChannel = await prisma.threadChannels.findUnique({
                 where: {
                     threadId: this.message.channel.id
                 }
@@ -113,7 +113,7 @@ class Message {
             }
         }
 
-        const getMessage = await prisma.Messages.findFirst({
+        const getMessage = await prisma.messages.findFirst({
             where: {
                 messageId: this.message.id
             }
@@ -143,7 +143,7 @@ class Message {
                 accountId:        this.message.author.id,
                 username:         this.message.author.username,
                 discriminator:    this.message.author.discriminator,
-                avatar:           this.message.author.avatarURL({ dynamic: true }),
+                avatar:           this.message.author.avatarURL({ forceStatic: false }),
                 bot:              this.message.author.bot,
                 createdTimestamp: createdTimestamp
             }
@@ -168,7 +168,7 @@ class Message {
             data:  {
                 username:         this.message.author.username,
                 discriminator:    this.message.author.discriminator,
-                avatar:           this.message.author.avatarURL({ dynamic: true }),
+                avatar:           this.message.author.avatarURL({ forceStatic: false }),
                 bot:              this.message.author.bot,
                 createdTimestamp: createdTimestamp
             }
@@ -189,7 +189,7 @@ class Message {
         let joinedTimestamp = this.message.guild.joinedTimestamp;
         joinedTimestamp = moment(joinedTimestamp).format('YYYY-MM-DD HH-mm-ss');
 
-        await prisma.Guilds.create({
+        await prisma.guilds.create({
             data: {
                 guildId:                  this.message.guild.id,
                 available:                this.message.guild.available,
@@ -201,19 +201,19 @@ class Message {
                 memberCount:              this.message.guild.memberCount,
                 partnered:                this.message.guild.partnered,
                 premiumSubscriptionCount: this.message.guild.premiumSubscriptionCount,
-                premiumTier:              this.message.guild.premiumTier,
+                premiumTier:              databaseEnums.premiumTier[this.message.guild.premiumTier],
                 verified:                 this.message.guild.verified,
 
                 GuildSettings: {
                     create: {
                         afkChannelID:                this.message.guild.afkChannelId,
                         afkTimeout:                  this.message.guild.afkTimeout,
-                        bannerURL:                   this.message.guild.bannerURL({ dynamic: true }),
-                        defaultMessageNotifications: this.message.guild.defaultMessageNotifications,
+                        bannerURL:                   this.message.guild.bannerURL({ forceStatic: false }),
+                        defaultMessageNotifications: databaseEnums.defaultMessageNotifications[this.message.guild.defaultMessageNotifications],
                         description:                 this.message.guild.description,
-                        explicitContentFilter:       this.message.guild.explicitContentFilter,
-                        iconURL:                     this.message.guild.iconURL({ dynamic: true }),
-                        mfaLevel:                    this.message.guild.mfaLevel,
+                        explicitContentFilter:       databaseEnums.explicitContentFilter[this.message.guild.explicitContentFilter],
+                        iconURL:                     this.message.guild.iconURL({ forceStatic: false }),
+                        mfaLevel:                    databaseEnums.mfaLevel[this.message.guild.mfaLevel],
                         name:                        this.message.guild.name,
                         nameAcronym:                 this.message.guild.nameAcronym,
                         ownerID:                     this.message.guild.ownerId,
@@ -224,7 +224,7 @@ class Message {
                         systemChannelID:             this.message.guild.systemChannelId,
                         publicUpdatesChannelId:      this.message.guild.publicUpdatesChannelId,
                         vanityURLCode:               this.message.guild.vanityURLCode,
-                        verificationLevel:           this.message.guild.verificationLevel
+                        verificationLevel:           databaseEnums.verificationLevel[this.message.guild.verificationLevel]
                     }
                 }
             }
@@ -245,7 +245,7 @@ class Message {
         let joinedTimestamp = this.message.guild.joinedTimestamp;
         joinedTimestamp = moment(joinedTimestamp).format('YYYY-MM-DD HH-mm-ss');
 
-        await prisma.Guilds.update({
+        await prisma.guilds.update({
             where: {
                 guildId: this.message.guild.id,
             },
@@ -260,12 +260,12 @@ class Message {
                 memberCount:              this.message.guild.memberCount,
                 partnered:                this.message.guild.partnered,
                 premiumSubscriptionCount: this.message.guild.premiumSubscriptionCount,
-                premiumTier:              this.message.guild.premiumTier,
+                premiumTier:              databaseEnums.premiumTier[this.message.guild.premiumTier],
                 verified:                 this.message.guild.verified,
             }
         });
 
-        await prisma.GuildSettings.update({
+        await prisma.guildSettings.update({
             where: {
                 guildId: this.message.guild.id,
             },
@@ -274,11 +274,11 @@ class Message {
                 afkChannelID:                this.message.guild.afkChannelId,
                 afkTimeout:                  this.message.guild.afkTimeout,
                 bannerURL:                   this.message.guild.bannerURL(),
-                defaultMessageNotifications: this.message.guild.defaultMessageNotifications,
+                defaultMessageNotifications: databaseEnums.defaultMessageNotifications[this.message.guild.defaultMessageNotifications],
                 description:                 this.message.guild.description,
-                explicitContentFilter:       this.message.guild.explicitContentFilter,
+                explicitContentFilter:       databaseEnums.explicitContentFilter[this.message.guild.explicitContentFilter],
                 iconURL:                     this.message.guild.iconURL(),
-                mfaLevel:                    this.message.guild.mfaLevel,
+                mfaLevel:                    databaseEnums.mfaLevel[this.message.guild.mfaLevel],
                 name:                        this.message.guild.name,
                 nameAcronym:                 this.message.guild.nameAcronym,
                 ownerID:                     this.message.guild.ownerId,
@@ -289,7 +289,7 @@ class Message {
                 systemChannelID:             this.message.guild.systemChannelId,
                 publicUpdatesChannelId:      this.message.guild.publicUpdatesChannelId,
                 vanityURLCode:               this.message.guild.vanityURLCode,
-                verificationLevel:           this.message.guild.verificationLevel,
+                verificationLevel:           databaseEnums.verificationLevel[this.message.guild.verificationLevel],
             }
         });
 
@@ -305,7 +305,7 @@ class Message {
         let joinedTimestamp = this.message.member.joinedTimestamp;
         joinedTimestamp = moment(joinedTimestamp).format('YYYY-MM-DD HH-mm-ss');
 
-        await prisma.GuildMembers.create({
+        await prisma.guildMembers.create({
             data: {
                 guildId:               this.message.guild.id,
                 accountId:             this.message.author.id,
@@ -334,7 +334,7 @@ class Message {
         let joinedTimestamp = this.message.member.joinedTimestamp;
         joinedTimestamp = moment(joinedTimestamp).format('YYYY-MM-DD HH-mm-ss');
 
-        await prisma.GuildMembers.update({
+        await prisma.guildMembers.update({
             where: {
                 memberId: this.message.member.id
             },
@@ -370,7 +370,7 @@ class Message {
                 name:             this.message.channel.name,
                 nsfw:             this.message.channel.nsfw,
                 topic:            this.message.channel.topic,
-                type:             this.message.channel.type,
+                type:             databaseEnums.channelType[this.message.channel.type],
                 createdTimestamp: createdTimestamp
             },
         });
@@ -392,7 +392,7 @@ class Message {
                 name:  this.message.channel.name,
                 nsfw:  this.message.channel.nsfw,
                 topic: this.message.channel.topic,
-                type:  this.message.channel.type,
+                type:  databaseEnums.channelType[this.message.channel.type],
             },
         });
 
@@ -405,7 +405,7 @@ class Message {
      * @returns {Promise<string>}
      */
     async createGuildChannel() {
-        await prisma.GuildChannels.create({
+        await prisma.guildChannels.create({
             data: {
                 guildId:           this.message.guild.id,
                 channelId:         this.message.channel.id,
@@ -429,7 +429,7 @@ class Message {
      * @returns {Promise<string>}
      */
     async updateGuildChannel() {
-        await prisma.GuildChannels.update({
+        await prisma.guildChannels.update({
             where: {
                 channelId: this.message.channel.id
             },
@@ -461,7 +461,7 @@ class Message {
         let archiveTimestamp = this.message.channel.archiveTimestamp;
         archiveTimestamp = moment(archiveTimestamp).format('YYYY-MM-DD HH-mm-ss');
 
-        await prisma.ThreadChannels.create({
+        await prisma.threadChannels.create({
             data: {
                 threadId:            this.message.channel.id,
                 ownerId:             this.message.channel.ownerId,
@@ -479,7 +479,7 @@ class Message {
                 locked:              this.message.channel.locked,
                 manageable:          this.message.channel.manageable,
                 memberCount:         this.message.channel.memberCount,
-                type:                this.message.channel.type,
+                type:                databaseEnums.channelType[this.message.channel.type],
                 unarchivable:        this.message.channel.unarchivable,
             }
         });
@@ -496,7 +496,7 @@ class Message {
         let archiveTimestamp = this.message.channel.archiveTimestamp;
         archiveTimestamp = moment(archiveTimestamp).format('YYYY-MM-DD HH-mm-ss');
 
-        await prisma.ThreadChannels.update({
+        await prisma.threadChannels.update({
             where: {
                 threadId: this.message.channel.id,
             },
@@ -514,7 +514,7 @@ class Message {
                 locked:              this.message.channel.locked,
                 manageable:          this.message.channel.manageable,
                 memberCount:         this.message.channel.memberCount,
-                type:                this.message.channel.type,
+                type:                databaseEnums.channelType[this.message.channel.type],
                 unarchivable:        this.message.channel.unarchivable,
             }
         });
@@ -523,7 +523,7 @@ class Message {
     }
 
     async createMessage() {
-        await prisma.Messages.create({
+        await prisma.messages.create({
             data: {
                 messageId: this.message.id,
                 guildId:   this.message.guild.id,
@@ -534,7 +534,7 @@ class Message {
             },
         });
 
-        await prisma.ChannelMessages.create({
+        await prisma.channelMessages.create({
             data: {
                 messageId:   this.message.id,
                 channelId:   this.message.channel.id,
@@ -542,7 +542,7 @@ class Message {
             }
         });
 
-        await prisma.UserChannels.create({
+        await prisma.userChannels.create({
             data: {
                 accountId: this.message.author.id,
                 channelId: this.message.channel.id,

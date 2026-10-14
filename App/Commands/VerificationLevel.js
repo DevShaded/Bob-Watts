@@ -1,7 +1,6 @@
 'use strict';
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../Database');
 
 class VerificationLevel {
     constructor(interaction, level) {
@@ -10,7 +9,7 @@ class VerificationLevel {
     }
 
     async getUser() {
-        const user = await prisma.Moderators.findFirst({
+        const user = await prisma.moderators.findFirst({
             where: {
                 guildId:   this.interaction.guild.id,
                 accountId: this.interaction.user.id

@@ -1,7 +1,8 @@
 'use strict';
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { MessageFlags } = require('discord.js');
+
+const prisma = require('../Database');
 const moment = require('moment');
 const ms = require('ms');
 
@@ -18,7 +19,7 @@ class Moderation {
         let violator = this.interaction.options.getMember('target');
         if (!violator) return this.interaction.reply({
             content:   'Sorry! I can\'t find this user!',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
 
         const user = await prisma.users.findUnique({
@@ -36,15 +37,15 @@ class Moderation {
                 case 'ban':
                     if (!violator.bannable && violator.id === this.interaction.client.user.id) {
                         const notBannable = {
-                            color:       '#ff0000',
+                            color:       0xff0000,
                             description: 'This user is not bannable!',
-                            timestamp:   new Date(),
+                            timestamp:   new Date().toISOString(),
                             footer:      {
                                 text: this.interaction.client.user.username,
                             },
                         };
 
-                        return this.interaction.reply({ embeds: [notBannable], ephemeral: true });
+                        return this.interaction.reply({ embeds: [notBannable], flags: MessageFlags.Ephemeral });
                     }
 
                     await this.ban(violator);
@@ -52,15 +53,15 @@ class Moderation {
                 case 'clean':
                     if (violator.id === this.interaction.client.user.id) {
                         const notClean = {
-                            color:       '#ff0000',
+                            color:       0xff0000,
                             description: 'Cannot clear messages from this user!',
-                            timestamp:   new Date(),
+                            timestamp:   new Date().toISOString(),
                             footer:      {
                                 text: this.interaction.client.user.username,
                             },
                         };
 
-                        return this.interaction.reply({ embeds: [notClean], ephemeral: true });
+                        return this.interaction.reply({ embeds: [notClean], flags: MessageFlags.Ephemeral });
                     }
 
                     await this.clean(violator);
@@ -68,15 +69,15 @@ class Moderation {
                 case 'clearinfractions':
                     if (violator.id === this.interaction.client.user.id) {
                         const notBannable = {
-                            color:       '#ff0000',
+                            color:       0xff0000,
                             description: 'Cannot clear infractions from this user!',
-                            timestamp:   new Date(),
+                            timestamp:   new Date().toISOString(),
                             footer:      {
                                 text: this.interaction.client.user.username,
                             },
                         };
 
-                        return this.interaction.reply({ embeds: [notBannable], ephemeral: true });
+                        return this.interaction.reply({ embeds: [notBannable], flags: MessageFlags.Ephemeral });
                     }
 
                     await this.clearinfractions(violator);
@@ -84,15 +85,15 @@ class Moderation {
                 case 'infractions':
                     if (violator.id === this.interaction.client.user.id) {
                         const notBannable = {
-                            color:       '#ff0000',
+                            color:       0xff0000,
                             description: 'Cannot get infractions from this user!',
-                            timestamp:   new Date(),
+                            timestamp:   new Date().toISOString(),
                             footer:      {
                                 text: this.interaction.client.user.username,
                             },
                         };
 
-                        return this.interaction.reply({ embeds: [notBannable], ephemeral: true });
+                        return this.interaction.reply({ embeds: [notBannable], flags: MessageFlags.Ephemeral });
                     }
 
                     await this.infractions(violator);
@@ -100,15 +101,15 @@ class Moderation {
                 case 'kick':
                     if (!violator.kickable && violator.id === this.interaction.client.user.id) {
                         const notKickable = {
-                            color:       '#ff0000',
+                            color:       0xff0000,
                             description: 'This user is not kickable!',
-                            timestamp:   new Date(),
+                            timestamp:   new Date().toISOString(),
                             footer:      {
                                 text: this.interaction.client.user.username,
                             },
                         };
 
-                        return this.interaction.reply({ embeds: [notKickable], ephemeral: true });
+                        return this.interaction.reply({ embeds: [notKickable], flags: MessageFlags.Ephemeral });
                     }
 
                     await this.kick(violator);
@@ -118,15 +119,15 @@ class Moderation {
                         await this.mute(violator);
                     } else {
                         const notMutable = {
-                            color:       '#ff0000',
+                            color:       0xff0000,
                             description: 'This user is not mutable!',
-                            timestamp:   new Date(),
+                            timestamp:   new Date().toISOString(),
                             footer:      {
                                 text: this.interaction.client.user.username,
                             },
                         };
 
-                        return this.interaction.reply({ embeds: [notMutable], ephemeral: true });
+                        return this.interaction.reply({ embeds: [notMutable], flags: MessageFlags.Ephemeral });
                     }
                     break;
                 case 'unban':
@@ -158,7 +159,7 @@ class Moderation {
             defaultReason = this.interaction.options.getString('reason')
         }
 
-        const infractionChannel = await prisma.GuildLogs.findUnique({
+        const infractionChannel = await prisma.guildLogs.findUnique({
             where: {
                 guildId: this.interaction.guild.id
             },
@@ -172,14 +173,14 @@ class Moderation {
         if (!infractionChannel) {
             try {
                 const noChannelEmbed = {
-                    color:       '#ff9900',
+                    color:       0xff9900,
                     description: 'This user has been banned!',
                     author:      {
                         name:     `${violator.user.tag}`,
-                        icon_url: violator.displayAvatarURL({ dynamic: true }),
+                        icon_url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     thumbnail:   {
-                        url: violator.displayAvatarURL({ dynamic: true }),
+                        url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     fields:      [
                         {
@@ -198,17 +199,17 @@ class Moderation {
                             inline: false,
                         },
                     ],
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     }
                 };
 
-                await violator.ban({ reason: defaultReason, days: days })
+                await violator.ban({ reason: defaultReason, deleteMessageSeconds: (days ?? 0) * 24 * 60 * 60 })
                     .then(async () => {
                         await this.interaction.reply({ embeds: [noChannelEmbed] });
 
-                        await prisma.Infractions.create({
+                        await prisma.infractions.create({
                             data: {
                                 guildId:   this.interaction.guild.id,
                                 accountId: violator.id,
@@ -227,9 +228,9 @@ class Moderation {
 
             if (mChannel === typeof undefined) {
                 const noInfractionChannel = {
-                    color:       '#ff0000',
+                    color:       0xff0000,
                     description: 'I could not find the infraction channel you have setup! Make sure it\'s setup correctly',
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
@@ -240,14 +241,14 @@ class Moderation {
 
             try {
                 const channelEmbed = {
-                    color:       '#ff9900',
+                    color:       0xff9900,
                     description: 'This user has been banned!',
                     author:      {
                         name:     `${violator.user.tag}`,
-                        icon_url: violator.displayAvatarURL({ dynamic: true }),
+                        icon_url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     thumbnail:   {
-                        url: violator.displayAvatarURL({ dynamic: true }),
+                        url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     fields:      [
                         {
@@ -276,30 +277,30 @@ class Moderation {
                             inline: false,
                         },
                     ],
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     }
                 };
 
                 const banEmbed = {
-                    color:       '#ff9900',
+                    color:       0xff9900,
                     description: 'That user has been banned!',
                     author:      {
                         name:     `${violator.user.tag}`,
-                        icon_url: violator.displayAvatarURL({ dynamic: true }),
+                        icon_url: violator.displayAvatarURL({ forceStatic: false }),
                     },
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     }
                 };
 
-                await violator.ban({ reason: defaultReason, days: days })
+                await violator.ban({ reason: defaultReason, deleteMessageSeconds: (days ?? 0) * 24 * 60 * 60 })
                     .then(async () => {
                         await mChannel.send({ embeds: [channelEmbed] });
 
-                        await prisma.Infractions.create({
+                        await prisma.infractions.create({
                             data: {
                                 guildId:   this.interaction.guild.id,
                                 accountId: violator.id,
@@ -309,7 +310,7 @@ class Moderation {
                             }
                         });
 
-                        await this.interaction.reply({ embeds: [banEmbed], ephemeral: true });
+                        await this.interaction.reply({ embeds: [banEmbed], flags: MessageFlags.Ephemeral });
                     });
             } catch (e) {
                 console.error(e);
@@ -329,7 +330,7 @@ class Moderation {
         // if amount is less than 1 add 1 to the amount
         if (amount < 1) amount = 1;
 
-        const infractionChannel = await prisma.GuildLogs.findUnique({
+        const infractionChannel = await prisma.guildLogs.findUnique({
             where: {
                 guildId: this.interaction.guild.id,
             },
@@ -359,7 +360,7 @@ class Moderation {
         if (!messages.length) {
             return this.interaction.reply({
                 content:   'Could not delete these messages because those messages arent stored in my database!',
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
 
@@ -373,13 +374,13 @@ class Moderation {
 
                 await iMessage.delete();
 
-                await prisma.ChannelMessages.deleteMany({
+                await prisma.channelMessages.deleteMany({
                     where: {
                         messageId: message.messageId,
                     },
                 });
 
-                await prisma.Messages.deleteMany({
+                await prisma.messages.deleteMany({
                     where: {
                         messageId: message.messageId,
                     },
@@ -393,16 +394,16 @@ class Moderation {
         if (!infractionChannel) {
             try {
                 const successClean = {
-                    color:       '#00ff00',
+                    color:       0x00ff00,
                     title:       'Successfully deleted messages!',
                     description: `${amount} messages from <@${violator.id}> has been successfully deleted`,
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
                 }
 
-                await this.interaction.editReply({ embeds: [successClean], ephemeral: true });
+                await this.interaction.editReply({ embeds: [successClean], flags: MessageFlags.Ephemeral });
             } catch (e) {
                 console.error(e)
             }
@@ -412,9 +413,9 @@ class Moderation {
 
             if (mChannel === typeof undefined) {
                 const noInfractionChannel = {
-                    color:       '#ff0000',
+                    color:       0xff0000,
                     description: 'I could not find the infraction channel you have setup! Make sure it\'s setup correctly',
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
@@ -424,14 +425,14 @@ class Moderation {
             }
             try {
                 const channelEmbed = {
-                    color:       '#ff9900',
+                    color:       0xff9900,
                     description: 'Successfully deleted messages!',
                     author:      {
                         name:     `${violator.user.tag}`,
-                        icon_url: violator.displayAvatarURL({ dynamic: true }),
+                        icon_url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     thumbnail:   {
-                        url: violator.displayAvatarURL({ dynamic: true }),
+                        url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     fields:      [
                         {
@@ -465,17 +466,17 @@ class Moderation {
                             inline: false,
                         },
                     ],
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     }
                 };
 
                 const successClean = {
-                    color:       '#00ff00',
+                    color:       0x00ff00,
                     title:       'Successfully deleted messages!',
                     description: `${amount} message(s) from <@${violator.id}> has been successfully deleted`,
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
@@ -483,7 +484,7 @@ class Moderation {
 
                 await mChannel.send({ embeds: [channelEmbed] });
 
-                await prisma.Infractions.create({
+                await prisma.infractions.create({
                     data: {
                         guildId:   this.interaction.guild.id,
                         accountId: violator.id,
@@ -493,19 +494,19 @@ class Moderation {
                     }
                 });
 
-                await this.interaction.editReply({ embeds: [successClean], ephemeral: true });
+                await this.interaction.editReply({ embeds: [successClean], flags: MessageFlags.Ephemeral });
 
                 try {
                     const cleanDMEmbed = {
-                        color:       '#ffc107',
+                        color:       0xffc107,
                         description: `${amount} of your messages in **${this.interaction.guild.name}** have been deleted for the following reason(s): \n\n${defaultReason}`,
-                        timestamp:   new Date(),
+                        timestamp:   new Date().toISOString(),
                         footer:      {
                             text: this.interaction.client.user.username,
                         },
                     }
 
-                    await violator.send({ embeds: [cleanDMEmbed], ephemeral: true })
+                    await violator.send({ embeds: [cleanDMEmbed], flags: MessageFlags.Ephemeral })
 
                 } catch {
                     console.log(`Failed to DM ${violator.tag}`)
@@ -527,7 +528,7 @@ class Moderation {
         // if amount is less than 1 add 1 to the amount
         if (amount < 1) amount = 1;
 
-        const infractionChannel = await prisma.GuildLogs.findUnique({
+        const infractionChannel = await prisma.guildLogs.findUnique({
             where: {
                 guildId: this.interaction.guild.id,
             },
@@ -538,7 +539,7 @@ class Moderation {
             }
         });
 
-        const userInfractions = await prisma.Infractions.findMany({
+        const userInfractions = await prisma.infractions.findMany({
             where: {
                 guildId:   this.interaction.guild.id,
                 accountId: violator.id,
@@ -556,7 +557,7 @@ class Moderation {
         if (userInfractions.length) {
             try {
                 for (let infraction of userInfractions) {
-                    await prisma.Infractions.delete({
+                    await prisma.infractions.delete({
                         where: {
                             id: infraction.id
                         }
@@ -565,25 +566,25 @@ class Moderation {
 
                 if (!infractionChannel) {
                     const successCleanInfractions = {
-                        color:       '#00ff00',
+                        color:       0x00ff00,
                         title:       'Successfully removed infractions!',
                         description: `${amount} infractions from <@${violator.id}> has been successfully removed!`,
-                        timestamp:   new Date(),
+                        timestamp:   new Date().toISOString(),
                         footer:      {
                             text: this.interaction.client.user.username,
                         },
                     }
 
-                    await this.interaction.reply({ embeds: [successCleanInfractions], ephemeral: true });
+                    await this.interaction.reply({ embeds: [successCleanInfractions], flags: MessageFlags.Ephemeral });
                 } else {
                     const joinedServerAtDate = (new Date(violator.joinedAt).getTime() / 1000).toFixed(0);
                     let mChannel = this.interaction.guild.channels.cache.get(infractionChannel.infractions_log);
 
                     if (mChannel === typeof undefined) {
                         const noInfractionChannel = {
-                            color:       '#ff0000',
+                            color:       0xff0000,
                             description: 'I could not find the infraction channel you have setup! Make sure it\'s setup correctly',
-                            timestamp:   new Date(),
+                            timestamp:   new Date().toISOString(),
                             footer:      {
                                 text: this.interaction.client.user.username,
                             },
@@ -593,14 +594,14 @@ class Moderation {
                     }
 
                     const channelEmbed = {
-                        color:       '#ff9900',
+                        color:       0xff9900,
                         description: 'Successfully removed infractions!',
                         author:      {
                             name:     `${violator.user.tag}`,
-                            icon_url: violator.displayAvatarURL({ dynamic: true }),
+                            icon_url: violator.displayAvatarURL({ forceStatic: false }),
                         },
                         thumbnail:   {
-                            url: violator.displayAvatarURL({ dynamic: true }),
+                            url: violator.displayAvatarURL({ forceStatic: false }),
                         },
                         fields:      [
                             {
@@ -634,36 +635,36 @@ class Moderation {
                                 inline: false,
                             },
                         ],
-                        timestamp:   new Date(),
+                        timestamp:   new Date().toISOString(),
                         footer:      {
                             text: this.interaction.client.user.username,
                         }
                     };
 
                     const successCleanInfractions = {
-                        color:       '#00ff00',
+                        color:       0x00ff00,
                         title:       'Successfully removed infractions!',
                         description: `${amount} infractions from <@${violator.id}> has been successfully removed!`,
-                        timestamp:   new Date(),
+                        timestamp:   new Date().toISOString(),
                         footer:      {
                             text: this.interaction.client.user.username,
                         },
                     };
 
                     await mChannel.send({ embeds: [channelEmbed] });
-                    await this.interaction.reply({ embeds: [successCleanInfractions], ephemeral: true });
+                    await this.interaction.reply({ embeds: [successCleanInfractions], flags: MessageFlags.Ephemeral });
 
                     try {
                         const cleanDMEmbed = {
-                            color:       '#ffc107',
+                            color:       0xffc107,
                             description: `${amount} of your messages in **${this.interaction.guild.name}** have been deleted for the following reason(s): \n\n${defaultReason}`,
-                            timestamp:   new Date(),
+                            timestamp:   new Date().toISOString(),
                             footer:      {
                                 text: this.interaction.client.user.username,
                             },
                         }
 
-                        await violator.send({ embeds: [cleanDMEmbed], ephemeral: true })
+                        await violator.send({ embeds: [cleanDMEmbed], flags: MessageFlags.Ephemeral })
 
                     } catch {
                         console.log(`Failed to DM ${violator.tag}`)
@@ -674,15 +675,15 @@ class Moderation {
             }
         } else {
             const couldNotFindInfraction = {
-                color: '#ff0000',
+                color: 0xff0000,
                 description: 'There are no infraction stored for this user!',
-                timestamp: new Date(),
+                timestamp: new Date().toISOString(),
                 footer: {
                     text: this.interaction.client.user.username,
                 }
             };
 
-            await this.interaction.reply({ embeds: [couldNotFindInfraction], ephemeral: true });
+            await this.interaction.reply({ embeds: [couldNotFindInfraction], flags: MessageFlags.Ephemeral });
         }
     };
 
@@ -692,7 +693,7 @@ class Moderation {
      * @returns {Promise<*>}
      */
     async infractions(violator) {
-        const infractions = await prisma.Infractions.findMany({
+        const infractions = await prisma.infractions.findMany({
             where: {
                 guildId:   this.interaction.guild.id,
                 accountId: violator.id
@@ -709,13 +710,13 @@ class Moderation {
             }
 
             const embed = {
-                color:     '#ff9900',
+                color:     0xff9900,
                 author:    {
                     name:     `${violator.user.tag}`,
-                    icon_url: violator.displayAvatarURL({ dynamic: true }),
+                    icon_url: violator.displayAvatarURL({ forceStatic: false }),
                 },
                 thumbnail: {
-                    url: violator.displayAvatarURL({ dynamic: true }),
+                    url: violator.displayAvatarURL({ forceStatic: false }),
                 },
                 fields:    [
                     {
@@ -724,28 +725,28 @@ class Moderation {
                         inline: false,
                     },
                 ],
-                timestamp: new Date(),
+                timestamp: new Date().toISOString(),
                 footer:    {
                     text: this.interaction.client.user.username,
                 }
             };
 
-            await this.interaction.reply({ embeds: [embed], ephemeral: true });
+            await this.interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
         } else {
             const embed = {
                 author:      {
                     name:     `${violator.user.tag}`,
                     icon_url: violator.user.displayAvatarURL(),
                 },
-                color:       '#28a745',
+                color:       0x28a745,
                 description: `<@${violator.id}> has no infractions.`,
-                timestamp:   new Date(),
+                timestamp:   new Date().toISOString(),
                 footer:      {
                     text: this.interaction.client.user.username,
                 }
             };
 
-            await this.interaction.reply({ embeds: [embed], ephemeral: true });
+            await this.interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
         }
     };
 
@@ -761,7 +762,7 @@ class Moderation {
             defaultReason = this.interaction.options.getString('reason')
         }
 
-        const infractionChannel = await prisma.GuildLogs.findUnique({
+        const infractionChannel = await prisma.guildLogs.findUnique({
             where: {
                 guildId: this.interaction.guild.id,
             },
@@ -775,14 +776,14 @@ class Moderation {
         if (!infractionChannel) {
             try {
                 const noChannelEmbed = {
-                    color:       '#ff9900',
+                    color:       0xff9900,
                     description: 'This user has been kicked!',
                     author:      {
                         name:     `${violator.user.tag}`,
-                        icon_url: violator.displayAvatarURL({ dynamic: true }),
+                        icon_url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     thumbnail:   {
-                        url: violator.displayAvatarURL({ dynamic: true }),
+                        url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     fields:      [
                         {
@@ -801,7 +802,7 @@ class Moderation {
                             inline: false,
                         },
                     ],
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     }
@@ -811,7 +812,7 @@ class Moderation {
                     .then(async () => {
                         await this.interaction.reply({ embeds: [noChannelEmbed] });
 
-                        await prisma.Infractions.create({
+                        await prisma.infractions.create({
                             data: {
                                 guildId:   this.interaction.guild.id,
                                 accountId: violator.id,
@@ -830,9 +831,9 @@ class Moderation {
 
             if (mChannel === typeof undefined) {
                 const noInfractionChannel = {
-                    color:       '#ff0000',
+                    color:       0xff0000,
                     description: 'I could not find the infraction channel you have setup! Make sure it\'s setup correctly',
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
@@ -843,14 +844,14 @@ class Moderation {
 
             try {
                 const channelEmbed = {
-                    color:       '#ff9900',
+                    color:       0xff9900,
                     description: 'This user has been kicked!',
                     author:      {
                         name:     `${violator.user.tag}`,
-                        icon_url: violator.displayAvatarURL({ dynamic: true }),
+                        icon_url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     thumbnail:   {
-                        url: violator.displayAvatarURL({ dynamic: true }),
+                        url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     fields:      [
                         {
@@ -879,20 +880,20 @@ class Moderation {
                             inline: false,
                         },
                     ],
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     }
                 };
 
                 const kickEmbed = {
-                    color:       '#ff9900',
+                    color:       0xff9900,
                     description: 'That user has been kicked!',
                     author:      {
                         name:     `${violator.user.tag}`,
-                        icon_url: violator.displayAvatarURL({ dynamic: true }),
+                        icon_url: violator.displayAvatarURL({ forceStatic: false }),
                     },
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     }
@@ -902,7 +903,7 @@ class Moderation {
                     .then(async () => {
                         await mChannel.send({ embeds: [channelEmbed] });
 
-                        await prisma.Infractions.create({
+                        await prisma.infractions.create({
                             data: {
                                 guildId:   this.interaction.guild.id,
                                 accountId: violator.id,
@@ -912,7 +913,7 @@ class Moderation {
                             }
                         });
 
-                        await this.interaction.reply({ embeds: [kickEmbed], ephemeral: true });
+                        await this.interaction.reply({ embeds: [kickEmbed], flags: MessageFlags.Ephemeral });
                     });
             } catch (e) {
                 console.error(e);
@@ -928,7 +929,7 @@ class Moderation {
             defaultReason = this.interaction.options.getString('reason')
         }
 
-        const infractionChannel = await prisma.GuildLogs.findUnique({
+        const infractionChannel = await prisma.guildLogs.findUnique({
             where: {
                 guildId: this.interaction.guild.id,
             },
@@ -942,33 +943,33 @@ class Moderation {
 
         if (!infractionChannel.mute_role) {
             const noMuteRole = {
-                color:       '#ff0000',
+                color:       0xff0000,
                 description: `This server has not setup a mute role. Set one up with \`/set muterole\``,
-                timestamp:   new Date(),
+                timestamp:   new Date().toISOString(),
                 footer:      {
                     text: this.interaction.client.user.username,
                 },
             };
 
-            return this.interaction.reply({ embeds: [noMuteRole], ephemeral: true });
+            return this.interaction.reply({ embeds: [noMuteRole], flags: MessageFlags.Ephemeral });
         }
 
         if (violator.roles.cache.has(infractionChannel.mute_role)) {
-            return this.interaction.reply({ content: `It looks like this user is already muted!`, ephemeral: true });
+            return this.interaction.reply({ content: `It looks like this user is already muted!`, flags: MessageFlags.Ephemeral });
         }
 
 
         if (!infractionChannel) {
             try {
                 const noChannelEmbed = {
-                    color:       '#ff9900',
+                    color:       0xff9900,
                     description: 'This user has been muted!',
                     author:      {
                         name:     `${violator.user.tag}`,
-                        icon_url: violator.displayAvatarURL({ dynamic: true }),
+                        icon_url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     thumbnail:   {
-                        url: violator.displayAvatarURL({ dynamic: true }),
+                        url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     fields:      [
                         {
@@ -987,7 +988,7 @@ class Moderation {
                             inline: false,
                         },
                     ],
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     }
@@ -1001,9 +1002,9 @@ class Moderation {
 
                                 try {
                                     const unmuteDMEmbed = {
-                                        color:       '#ffc107',
+                                        color:       0xffc107,
                                         description: `Your mute cool down is finished in **${this.interaction.guild.name}**`,
-                                        timestamp:   new Date(),
+                                        timestamp:   new Date().toISOString(),
                                         footer:      {
                                             text: this.interaction.client.user.username,
                                         },
@@ -1017,7 +1018,7 @@ class Moderation {
 
                             await this.interaction.reply({ embeds: [noChannelEmbed] });
 
-                            await prisma.Infractions.create({
+                            await prisma.infractions.create({
                                 data: {
                                     guildId:   this.interaction.guild.id,
                                     accountId: violator.id,
@@ -1029,9 +1030,9 @@ class Moderation {
 
                             try {
                                 const muteDMEmbed = {
-                                    color:       '#ffc107',
+                                    color:       0xffc107,
                                     description: `You have been muted in **${this.interaction.guild.name}** for the following reason(s): \n\n${defaultReason}`,
-                                    timestamp:   new Date(),
+                                    timestamp:   new Date().toISOString(),
                                     footer:      {
                                         text: this.interaction.client.user.username,
                                     },
@@ -1047,7 +1048,7 @@ class Moderation {
                         .then(async () => {
                             await this.interaction.reply({ embeds: [noChannelEmbed] });
 
-                            await prisma.Infractions.create({
+                            await prisma.infractions.create({
                                 data: {
                                     guildId:   this.interaction.guild.id,
                                     accountId: violator.id,
@@ -1067,9 +1068,9 @@ class Moderation {
 
             if (mChannel === typeof undefined) {
                 const noInfractionChannel = {
-                    color:       '#ff0000',
+                    color:       0xff0000,
                     description: 'I could not find the infraction channel you have setup! Make sure it\'s setup correctly',
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
@@ -1080,14 +1081,14 @@ class Moderation {
 
             try {
                 const channelEmbed = {
-                    color:       '#ff9900',
+                    color:       0xff9900,
                     description: 'This user has been muted!',
                     author:      {
                         name:     `${violator.user.tag}`,
-                        icon_url: violator.displayAvatarURL({ dynamic: true }),
+                        icon_url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     thumbnail:   {
-                        url: violator.displayAvatarURL({ dynamic: true }),
+                        url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     fields:      [
                         {
@@ -1121,20 +1122,20 @@ class Moderation {
                             inline: true,
                         },
                     ],
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     }
                 };
 
                 const muteEmbed = {
-                    color:       '#ff9900',
+                    color:       0xff9900,
                     description: 'That user has been muted!',
                     author:      {
                         name:     `${violator.user.tag}`,
-                        icon_url: violator.displayAvatarURL({ dynamic: true }),
+                        icon_url: violator.displayAvatarURL({ forceStatic: false }),
                     },
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     }
@@ -1148,9 +1149,9 @@ class Moderation {
 
                                 try {
                                     const unmuteDMEmbed = {
-                                        color:       '#ffc107',
+                                        color:       0xffc107,
                                         description: `Your mute cool down is finished in **${this.interaction.guild.name}**`,
-                                        timestamp:   new Date(),
+                                        timestamp:   new Date().toISOString(),
                                         footer:      {
                                             text: this.interaction.client.user.username,
                                         },
@@ -1162,7 +1163,7 @@ class Moderation {
                                 }
                             }, ms(`${days} days`));
 
-                            await prisma.Infractions.create({
+                            await prisma.infractions.create({
                                 data: {
                                     guildId:   this.interaction.guild.id,
                                     accountId: violator.id,
@@ -1178,9 +1179,9 @@ class Moderation {
 
                             try {
                                 const muteDMEmbed = {
-                                    color:       '#ffc107',
+                                    color:       0xffc107,
                                     description: `You have been muted in **${this.interaction.guild.name}** for the following reason(s): \n\n${defaultReason}`,
-                                    timestamp:   new Date(),
+                                    timestamp:   new Date().toISOString(),
                                     footer:      {
                                         text: this.interaction.client.user.username,
                                     },
@@ -1196,7 +1197,7 @@ class Moderation {
                         .then(async () => {
                             await mChannel.send({ embeds: [channelEmbed] });
 
-                            await prisma.Infractions.create({
+                            await prisma.infractions.create({
                                 data: {
                                     guildId:   this.interaction.guild.id,
                                     accountId: violator.id,
@@ -1206,13 +1207,13 @@ class Moderation {
                                 }
                             });
 
-                            await this.interaction.reply({ embeds: [muteEmbed], ephemeral: true });
+                            await this.interaction.reply({ embeds: [muteEmbed], flags: MessageFlags.Ephemeral });
 
                             try {
                                 const muteDMEmbed = {
-                                    color:       '#ffc107',
+                                    color:       0xffc107,
                                     description: `You have been muted in **${this.interaction.guild.name}** for the following reason(s): \n\n${defaultReason}`,
-                                    timestamp:   new Date(),
+                                    timestamp:   new Date().toISOString(),
                                     footer:      {
                                         text: this.interaction.client.user.username,
                                     },
@@ -1231,7 +1232,7 @@ class Moderation {
     };
 
     async unban(violator) {
-        const infractionChannel = await prisma.GuildLogs.findUnique({
+        const infractionChannel = await prisma.guildLogs.findUnique({
             where: {
                 guildId: this.interaction.guild.id,
             },
@@ -1245,7 +1246,7 @@ class Moderation {
         if (!infractionChannel) {
             try {
                 const noChannelEmbed = {
-                    color:       '#ff9900',
+                    color:       0xff9900,
                     description: 'This user has been unbanned!',
                     author:      {
                         name:     `${violator.username}#${violator.discriminator}`,
@@ -1266,7 +1267,7 @@ class Moderation {
                             inline: true,
                         },
                     ],
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     }
@@ -1276,7 +1277,7 @@ class Moderation {
                     .then(async () => {
                         await this.interaction.reply({ embeds: [noChannelEmbed] });
 
-                        await prisma.Infractions.create({
+                        await prisma.infractions.create({
                             data: {
                                 guildId:   this.interaction.guild.id,
                                 accountId: violator.accountId,
@@ -1289,16 +1290,16 @@ class Moderation {
                     .catch(async (e) => {
                         console.error(e);
                         const notBannedEmbed = {
-                            color:       '#ff0033',
+                            color:       0xff0033,
                             title:       'User not banned from this server',
                             description: `Cannot unban <@${violator.accountId}>, because that user is not banned from this server!`,
-                            timestamp:   new Date(),
+                            timestamp:   new Date().toISOString(),
                             footer:      {
                                 text: this.interaction.client.user.username,
                             },
                         };
 
-                        await this.interaction.reply({ embeds: [notBannedEmbed], ephemeral: true });
+                        await this.interaction.reply({ embeds: [notBannedEmbed], flags: MessageFlags.Ephemeral });
                     });
             } catch (e) {
                 console.error(e);
@@ -1308,9 +1309,9 @@ class Moderation {
 
             if (mChannel === typeof undefined) {
                 const noInfractionChannel = {
-                    color:       '#ff0000',
+                    color:       0xff0000,
                     description: 'I could not find the infraction channel you have setup! Make sure it\'s setup correctly',
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
@@ -1321,7 +1322,7 @@ class Moderation {
 
             try {
                 const channelEmbed = {
-                    color:       '#ff9900',
+                    color:       0xff9900,
                     description: 'This user has been unbanned!',
                     author:      {
                         name:     `${violator.username}#${violator.discriminator}`,
@@ -1347,20 +1348,20 @@ class Moderation {
                             inline: true,
                         },
                     ],
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     }
                 };
 
                 const unbanEmbed = {
-                    color:       '#ff9900',
+                    color:       0xff9900,
                     description: 'That user has been unbanned!',
                     author:      {
                         name:     `${violator.username}#${violator.discriminator}`,
                         icon_url: violator.avatar,
                     },
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     }
@@ -1370,7 +1371,7 @@ class Moderation {
                     .then(async () => {
                         await mChannel.send({ embeds: [channelEmbed] });
 
-                        await prisma.Infractions.create({
+                        await prisma.infractions.create({
                             data: {
                                 guildId:   this.interaction.guild.id,
                                 accountId: violator.accountId,
@@ -1380,21 +1381,21 @@ class Moderation {
                             }
                         });
 
-                        await this.interaction.reply({ embeds: [unbanEmbed], ephemeral: true });
+                        await this.interaction.reply({ embeds: [unbanEmbed], flags: MessageFlags.Ephemeral });
                     })
                     .catch(async (e) => {
                         console.error(e)
                         const notBannedEmbed = {
-                            color:       '#ff0033',
+                            color:       0xff0033,
                             title:       'User not banned from this server',
                             description: `Cannot unban <@${violator.accountId}>, because that user is not banned from this server, or something else wrong happened?`,
-                            timestamp:   new Date(),
+                            timestamp:   new Date().toISOString(),
                             footer:      {
                                 text: this.interaction.client.user.username,
                             },
                         }
 
-                        await this.interaction.reply({ embeds: [notBannedEmbed], ephemeral: true })
+                        await this.interaction.reply({ embeds: [notBannedEmbed], flags: MessageFlags.Ephemeral })
                     });
             } catch (e) {
                 console.error(e);
@@ -1409,7 +1410,7 @@ class Moderation {
             defaultReason = this.interaction.options.getString('reason')
         }
 
-        const infractionChannel = await prisma.GuildLogs.findUnique({
+        const infractionChannel = await prisma.guildLogs.findUnique({
             where: {
                 guildId: this.interaction.guild.id,
             },
@@ -1423,32 +1424,32 @@ class Moderation {
 
         if (!infractionChannel.mute_role) {
             const noMuteRole = {
-                color:       '#ff0000',
+                color:       0xff0000,
                 description: `This server has not setup a mute role. Set one up with \`/set muterole\``,
-                timestamp:   new Date(),
+                timestamp:   new Date().toISOString(),
                 footer:      {
                     text: this.interaction.client.user.username,
                 },
             };
 
-            return this.interaction.reply({ embeds: [noMuteRole], ephemeral: true });
+            return this.interaction.reply({ embeds: [noMuteRole], flags: MessageFlags.Ephemeral });
         }
 
         if (!violator.roles.cache.has(infractionChannel.mute_role)) {
-            return this.interaction.reply({ content: `It looks like this user is not muted!`, ephemeral: true });
+            return this.interaction.reply({ content: `It looks like this user is not muted!`, flags: MessageFlags.Ephemeral });
         }
 
         if (!infractionChannel) {
             try {
                 const noChannelEmbed = {
-                    color:       '#ff9900',
+                    color:       0xff9900,
                     description: 'This user has been unmuted!',
                     author:      {
                         name:     `${violator.user.tag}`,
-                        icon_url: violator.displayAvatarURL({ dynamic: true }),
+                        icon_url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     thumbnail:   {
-                        url: violator.displayAvatarURL({ dynamic: true }),
+                        url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     fields:      [
                         {
@@ -1467,7 +1468,7 @@ class Moderation {
                             inline: false,
                         },
                     ],
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     }
@@ -1477,7 +1478,7 @@ class Moderation {
                     .then(async () => {
                         await this.interaction.reply({ embeds: [noChannelEmbed] });
 
-                        await prisma.Infractions.create({
+                        await prisma.infractions.create({
                             data: {
                                 guildId:   this.interaction.guild.id,
                                 accountId: violator.id,
@@ -1489,9 +1490,9 @@ class Moderation {
 
                         try {
                             const muteDMEmbed = {
-                                color:       '#ffc107',
+                                color:       0xffc107,
                                 description: `You have been unmuted in **${this.interaction.guild.name}** for the following reason(s): \n\n${defaultReason}`,
-                                timestamp:   new Date(),
+                                timestamp:   new Date().toISOString(),
                                 footer:      {
                                     text: this.interaction.client.user.username,
                                 },
@@ -1511,9 +1512,9 @@ class Moderation {
 
             if (mChannel === typeof undefined) {
                 const noInfractionChannel = {
-                    color:       '#ff0000',
+                    color:       0xff0000,
                     description: 'I could not find the infraction channel you have setup! Make sure it\'s setup correctly',
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
@@ -1526,14 +1527,14 @@ class Moderation {
                 await violator.roles.remove(infractionChannel.mute_role)
                     .then(async () => {
                         const channelEmbed = {
-                            color:       '#ff9900',
+                            color:       0xff9900,
                             description: 'This user has been unmuted!',
                             author:      {
                                 name:     `${violator.user.tag}`,
-                                icon_url: violator.displayAvatarURL({ dynamic: true }),
+                                icon_url: violator.displayAvatarURL({ forceStatic: false }),
                             },
                             thumbnail:   {
-                                url: violator.displayAvatarURL({ dynamic: true }),
+                                url: violator.displayAvatarURL({ forceStatic: false }),
                             },
                             fields:      [
                                 {
@@ -1562,20 +1563,20 @@ class Moderation {
                                     inline: false,
                                 },
                             ],
-                            timestamp:   new Date(),
+                            timestamp:   new Date().toISOString(),
                             footer:      {
                                 text: this.interaction.client.user.username,
                             }
                         };
 
                         const unmuteEmbed = {
-                            color:       '#ff9900',
+                            color:       0xff9900,
                             description: 'That user has been unmuted!',
                             author:      {
                                 name:     `${violator.user.tag}`,
-                                icon_url: violator.displayAvatarURL({ dynamic: true }),
+                                icon_url: violator.displayAvatarURL({ forceStatic: false }),
                             },
-                            timestamp:   new Date(),
+                            timestamp:   new Date().toISOString(),
                             footer:      {
                                 text: this.interaction.client.user.username,
                             }
@@ -1583,7 +1584,7 @@ class Moderation {
 
                         await mChannel.send({ embeds: [channelEmbed] });
 
-                        await prisma.Infractions.create({
+                        await prisma.infractions.create({
                             data: {
                                 guildId:   this.interaction.guild.id,
                                 accountId: violator.id,
@@ -1593,13 +1594,13 @@ class Moderation {
                             }
                         });
 
-                        await this.interaction.reply({ embeds: [unmuteEmbed], ephemeral: true });
+                        await this.interaction.reply({ embeds: [unmuteEmbed], flags: MessageFlags.Ephemeral });
 
                         try {
                             const unmuteDMEmbed = {
-                                color:       '#ffc107',
+                                color:       0xffc107,
                                 description: `You have been unmuted in **${this.interaction.guild.name}** for the following reason(s): \n\n${defaultReason}`,
-                                timestamp:   new Date(),
+                                timestamp:   new Date().toISOString(),
                                 footer:      {
                                     text: this.interaction.client.user.username,
                                 },
@@ -1624,7 +1625,7 @@ class Moderation {
             defaultReason = this.interaction.options.getString('reason')
         }
 
-        const infractionChannel = await prisma.GuildLogs.findUnique({
+        const infractionChannel = await prisma.guildLogs.findUnique({
             where: {
                 guildId: this.interaction.guild.id,
             },
@@ -1638,14 +1639,14 @@ class Moderation {
         if (!infractionChannel) {
             try {
                 const noChannelEmbed = {
-                    color:       '#ff9900',
+                    color:       0xff9900,
                     description: 'This user has been warned!',
                     author:      {
                         name:     `${violator.user.tag}`,
-                        icon_url: violator.displayAvatarURL({ dynamic: true }),
+                        icon_url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     thumbnail:   {
-                        url: violator.displayAvatarURL({ dynamic: true }),
+                        url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     fields:      [
                         {
@@ -1664,7 +1665,7 @@ class Moderation {
                             inline: false,
                         },
                     ],
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     }
@@ -1672,7 +1673,7 @@ class Moderation {
 
                 await this.interaction.reply({ embeds: [noChannelEmbed] });
 
-                await prisma.Infractions.create({
+                await prisma.infractions.create({
                     data: {
                         guildId:   this.interaction.guild.id,
                         accountId: violator.id,
@@ -1690,9 +1691,9 @@ class Moderation {
 
             if (mChannel === typeof undefined) {
                 const noInfractionChannel = {
-                    color:       '#ff0000',
+                    color:       0xff0000,
                     description: 'I could not find the infraction channel you have setup! Make sure it\'s setup correctly',
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
@@ -1703,14 +1704,14 @@ class Moderation {
 
             try {
                 const channelEmbed = {
-                    color:       '#ff9900',
+                    color:       0xff9900,
                     description: 'This user has been warned!',
                     author:      {
                         name:     `${violator.user.tag}`,
-                        icon_url: violator.displayAvatarURL({ dynamic: true }),
+                        icon_url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     thumbnail:   {
-                        url: violator.displayAvatarURL({ dynamic: true }),
+                        url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     fields:      [
                         {
@@ -1739,20 +1740,20 @@ class Moderation {
                             inline: false,
                         },
                     ],
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     }
                 };
 
                 const kickEmbed = {
-                    color:       '#ff9900',
+                    color:       0xff9900,
                     description: 'That user has been warned!',
                     author:      {
                         name:     `${violator.user.tag}`,
-                        icon_url: violator.displayAvatarURL({ dynamic: true }),
+                        icon_url: violator.displayAvatarURL({ forceStatic: false }),
                     },
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     }
@@ -1760,7 +1761,7 @@ class Moderation {
 
                 await mChannel.send({ embeds: [channelEmbed] });
 
-                await prisma.Infractions.create({
+                await prisma.infractions.create({
                     data: {
                         guildId:   this.interaction.guild.id,
                         accountId: violator.id,
@@ -1770,13 +1771,13 @@ class Moderation {
                     }
                 });
 
-                await this.interaction.reply({ embeds: [kickEmbed], ephemeral: true });
+                await this.interaction.reply({ embeds: [kickEmbed], flags: MessageFlags.Ephemeral });
 
                 try {
                     const warnDMEmbed = {
-                        color:       '#ffc107',
+                        color:       0xffc107,
                         description: `You have been warned in **${this.interaction.guild.name}** for the following reason(s): \n\n${defaultReason}`,
-                        timestamp:   new Date(),
+                        timestamp:   new Date().toISOString(),
                         footer:      {
                             text: this.interaction.client.user.username,
                         },
@@ -1805,7 +1806,7 @@ class Moderation {
             defaultReason = this.interaction.options.getString('reason')
         }
 
-        const infractionChannel = await prisma.GuildLogs.findUnique({
+        const infractionChannel = await prisma.guildLogs.findUnique({
             where: {
                 guildId: this.interaction.guild.id,
             },
@@ -1819,14 +1820,14 @@ class Moderation {
         if (!infractionChannel) {
             try {
                 const noChannelEmbed = {
-                    color:       '#ff9900',
+                    color:       0xff9900,
                     description: `This user has been kicked from <#${violator.voice.channel.id}>`,
                     author:      {
                         name:     `${violator.user.tag}`,
-                        icon_url: violator.displayAvatarURL({ dynamic: true }),
+                        icon_url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     thumbnail:   {
-                        url: violator.displayAvatarURL({ dynamic: true }),
+                        url: violator.displayAvatarURL({ forceStatic: false }),
                     },
                     fields:      [
                         {
@@ -1845,7 +1846,7 @@ class Moderation {
                             inline: false,
                         },
                     ],
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     }
@@ -1856,7 +1857,7 @@ class Moderation {
                         .then(async () => {
                             await this.interaction.reply({ embeds: [noChannelEmbed] });
 
-                            await prisma.Infractions.create({
+                            await prisma.infractions.create({
                                 data: {
                                     guildId:   this.interaction.guild.id,
                                     accountId: violator.id,
@@ -1868,15 +1869,15 @@ class Moderation {
                         });
                 } else {
                     const embed = {
-                        color:       '#ff0000',
+                        color:       0xff0000,
                         description: `<@${violator.id}> is not in a voice channel!`,
-                        timestamp:   new Date(),
+                        timestamp:   new Date().toISOString(),
                         footer:      {
                             text: this.interaction.client.user.username,
                         },
                     };
 
-                    return this.interaction.reply({ embeds: [embed], ephemeral: true });
+                    return this.interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
                 }
             } catch (e) {
                 console.error(e);
@@ -1887,9 +1888,9 @@ class Moderation {
 
             if (mChannel === typeof undefined) {
                 const noInfractionChannel = {
-                    color:       '#ff0000',
+                    color:       0xff0000,
                     description: 'I could not find the infraction channel you have setup! Make sure it\'s setup correctly',
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
@@ -1901,14 +1902,14 @@ class Moderation {
             try {
                 if (violator.voice.channel) {
                     const channelEmbed = {
-                        color:       '#ff9900',
+                        color:       0xff9900,
                         description: `This user has been kicked from <#${violator.voice.channel.id}>!`,
                         author:      {
                             name:     `${violator.user.tag}`,
-                            icon_url: violator.displayAvatarURL({ dynamic: true }),
+                            icon_url: violator.displayAvatarURL({ forceStatic: false }),
                         },
                         thumbnail:   {
-                            url: violator.displayAvatarURL({ dynamic: true }),
+                            url: violator.displayAvatarURL({ forceStatic: false }),
                         },
                         fields:      [
                             {
@@ -1937,20 +1938,20 @@ class Moderation {
                                 inline: false,
                             },
                         ],
-                        timestamp:   new Date(),
+                        timestamp:   new Date().toISOString(),
                         footer:      {
                             text: this.interaction.client.user.username,
                         }
                     };
 
                     const vcKickEmbed = {
-                        color:       '#ff9900',
+                        color:       0xff9900,
                         description: 'That user has been kicked from the voice channel!',
                         author:      {
                             name:     `${violator.user.tag}`,
-                            icon_url: violator.displayAvatarURL({ dynamic: true }),
+                            icon_url: violator.displayAvatarURL({ forceStatic: false }),
                         },
-                        timestamp:   new Date(),
+                        timestamp:   new Date().toISOString(),
                         footer:      {
                             text: this.interaction.client.user.username,
                         }
@@ -1960,7 +1961,7 @@ class Moderation {
                         .then(async () => {
                             await mChannel.send({ embeds: [channelEmbed] });
 
-                            await prisma.Infractions.create({
+                            await prisma.infractions.create({
                                 data: {
                                     guildId:   this.interaction.guild.id,
                                     accountId: violator.id,
@@ -1970,14 +1971,14 @@ class Moderation {
                                 }
                             });
 
-                            await this.interaction.reply({ embeds: [vcKickEmbed], ephemeral: true });
+                            await this.interaction.reply({ embeds: [vcKickEmbed], flags: MessageFlags.Ephemeral });
 
 
                             try {
                                 const warnDMEmbed = {
-                                    color:       '#ffc107',
+                                    color:       0xffc107,
                                     description: `You have been kicked from the voice channel in **${this.interaction.guild.name}** for the following reason(s): \n\n${defaultReason}`,
-                                    timestamp:   new Date(),
+                                    timestamp:   new Date().toISOString(),
                                     footer:      {
                                         text: this.interaction.client.user.username,
                                     },
@@ -1991,15 +1992,15 @@ class Moderation {
                         });
                 } else {
                     const embed = {
-                        color:       '#ff0000',
+                        color:       0xff0000,
                         description: `<@${violator.id}> is not in a voice channel!`,
-                        timestamp:   new Date(),
+                        timestamp:   new Date().toISOString(),
                         footer:      {
                             text: this.interaction.client.user.username,
                         },
                     };
 
-                    return this.interaction.reply({ embeds: [embed], ephemeral: true });
+                    return this.interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
                 }
             } catch (e) {
                 console.error(e);
@@ -2016,7 +2017,7 @@ class Moderation {
                 accountId:        violator.user.id,
                 username:         violator.user.username,
                 discriminator:    violator.user.discriminator,
-                avatar:           violator.user.avatarURL({ dynamic: true }),
+                avatar:           violator.user.avatarURL({ forceStatic: false }),
                 bot:              violator.user.bot,
                 createdTimestamp: createdTimestamp
             }
