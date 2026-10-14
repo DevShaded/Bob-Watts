@@ -11,11 +11,15 @@ module.exports = {
     name:        'ping',
     description: 'Returns a message with a response time message',
     execute:     async (interaction) => {
+        const latency = interaction.client.ws.ping;
+        const hasLatency = Number.isFinite(latency) && latency >= 0;
         let embedColor;
 
-        if (interaction.client.ws.ping <= 450) {
+        if (!hasLatency) {
+            embedColor = 0xffc107;
+        } else if (latency <= 450) {
             embedColor = 0x28a745;
-        } else if (interaction.client.ws.ping > 450 && interaction.client.ws.ping < 750) {
+        } else if (latency < 750) {
             embedColor = 0xFF6000;
         } else {
             embedColor = 0xdc3545;
@@ -23,7 +27,9 @@ module.exports = {
 
         const pingEmbed = {
             color:       embedColor,
-            description: `🏓 Pong - ${Math.floor(interaction.client.ws.ping).toLocaleString()} milliseconds.`,
+            description: hasLatency
+                ? `🏓 Pong - ${Math.floor(latency).toLocaleString()} milliseconds.`
+                : '🏓 Pong - gateway latency is not available yet.',
             timestamp:   new Date().toISOString(),
             footer:      {
                 text:     interaction.client.user.username,

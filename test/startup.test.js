@@ -128,6 +128,28 @@ test('startup can be repeated and uses the default activity when none is stored'
     assert.equal(login.mock.callCount(), 2);
 });
 
+test('ping distinguishes unavailable gateway latency from a measured response', async t => {
+    t.mock.method(console, 'log', () => {});
+    t.mock.method(Client.prototype, 'login', async () => 'test-token');
+    const client = await startBot();
+    t.after(() => client.destroy());
+    client.user = { username: 'Test bot' };
+    const handler = client.listeners(Events.InteractionCreate)[0];
+    for (const latency of [-1, Number.NaN, Number.POSITIVE_INFINITY, 100]) {
+        const replies = [];
+        Object.defineProperty(client.ws, 'ping', { configurable: true, value: latency });
+        await handler({
+            isChatInputCommand: () => true, commandName: 'ping', client,
+            reply: async payload => { replies.push(payload); },
+        });
+        assert.equal(replies.length, 1);
+        assert.equal(replies[0].embeds[0].description, latency === 100
+            ? '🏓 Pong - 100 milliseconds.'
+            : '🏓 Pong - gateway latency is not available yet.');
+        assert.equal(replies[0].embeds[0].color, latency === 100 ? 0x28a745 : 0xffc107);
+    }
+});
+
 test('startup dispatches guild events and retains message help and ignored messages', async t => {
     t.mock.method(console, 'log', () => {});
     t.mock.method(Client.prototype, 'login', async () => 'test-token');

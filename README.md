@@ -245,6 +245,14 @@ npx pm2 logs "Bob Watts"
 npx pm2 stop "Bob Watts"
 ```
 
+PM2 file watching is disabled so Git fetches and generated files cannot restart
+the running bot. Use `npm run dev` for intentional development watching. To disable
+watching for an existing PM2 process, run `npx pm2 stop "Bob Watts" --watch`, then
+`npx pm2 restart "Bob Watts"`. Editing the ecosystem file alone does not change the
+daemon's saved settings.
+`/ping` reports unavailable gateway latency until Discord has supplied a valid
+heartbeat measurement, rather than displaying the initial `-1` value as a latency.
+
 ## Commands
 
 ### Fun Commands

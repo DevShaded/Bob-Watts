@@ -101,6 +101,28 @@ await test('dispatch ignores non-command and unknown interactions', async () => 
     assert.deepEqual(interaction.responses, []);
 });
 
+await test('ping reports unavailable gateway latency until a valid heartbeat measurement arrives', async () => {
+    const gateway = new OfflineGateway();
+    await startBot({ env: startupEnvironment, createGateway: () => gateway });
+    for (const latency of [-1, Number.NaN, Number.POSITIVE_INFINITY]) {
+        const interaction = new OfflineInteraction();
+        interaction.client.ws.ping = latency;
+        await gateway.dispatch(interaction);
+        assert.partialDeepStrictEqual(interaction.responses, [{
+            method: 'reply', payload: { embeds: [{
+                color: 0xffc107,
+                description: '🏓 Pong - gateway latency is not available yet.',
+            }] },
+        }]);
+    }
+    const interaction = new OfflineInteraction();
+    interaction.client.ws.ping = 100;
+    await gateway.dispatch(interaction);
+    assert.partialDeepStrictEqual(interaction.responses, [{
+        method: 'reply', payload: { embeds: [{ color: 0x28a745, description: '🏓 Pong - 100 milliseconds.' }] },
+    }]);
+});
+
 await test('command failures use reply, editReply or followUp according to the response lifecycle', async () => {
     const gateway = new OfflineGateway();
     const errors: unknown[] = [];
