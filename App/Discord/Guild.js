@@ -1,9 +1,9 @@
 'use strict';
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-require('dotenv').config();
+const prisma = require('../Database');
+require('dotenv').config({ quiet: true });
 const moment = require('moment');
+const databaseEnums = require('./databaseEnums');
 
 class Guild {
     constructor(guild) {
@@ -11,7 +11,7 @@ class Guild {
     };
 
     async getGuild() {
-        const getGuild = await prisma.Guilds.findUnique({
+        const getGuild = await prisma.guilds.findUnique({
             where: {
                 guildId: this.guild.id
             }
@@ -31,7 +31,7 @@ class Guild {
         let joinedTimestamp = this.guild.joinedTimestamp;
         joinedTimestamp = moment(joinedTimestamp).format('YYYY-MM-DD HH-mm-ss');
 
-        await prisma.Guilds.create({
+        await prisma.guilds.create({
             data: {
                 guildId:                  this.guild.id,
                 available:                this.guild.available,
@@ -43,19 +43,19 @@ class Guild {
                 memberCount:              this.guild.memberCount,
                 partnered:                this.guild.partnered,
                 premiumSubscriptionCount: this.guild.premiumSubscriptionCount,
-                premiumTier:              this.guild.premiumTier,
+                premiumTier:              databaseEnums.premiumTier[this.guild.premiumTier],
                 verified:                 this.guild.verified,
 
                 GuildSettings: {
                     create: {
                         afkChannelID:                this.guild.afkChannelId,
                         afkTimeout:                  this.guild.afkTimeout,
-                        bannerURL:                   this.guild.bannerURL({ dynamic: true }),
-                        defaultMessageNotifications: this.guild.defaultMessageNotifications,
+                        bannerURL:                   this.guild.bannerURL({ forceStatic: false }),
+                        defaultMessageNotifications: databaseEnums.defaultMessageNotifications[this.guild.defaultMessageNotifications],
                         description:                 this.guild.description,
-                        explicitContentFilter:       this.guild.explicitContentFilter,
-                        iconURL:                     this.guild.iconURL({ dynamic: true }),
-                        mfaLevel:                    this.guild.mfaLevel,
+                        explicitContentFilter:       databaseEnums.explicitContentFilter[this.guild.explicitContentFilter],
+                        iconURL:                     this.guild.iconURL({ forceStatic: false }),
+                        mfaLevel:                    databaseEnums.mfaLevel[this.guild.mfaLevel],
                         name:                        this.guild.name,
                         nameAcronym:                 this.guild.nameAcronym,
                         ownerID:                     this.guild.ownerId,
@@ -66,7 +66,7 @@ class Guild {
                         systemChannelID:             this.guild.systemChannelId,
                         publicUpdatesChannelId:      this.guild.publicUpdatesChannelId,
                         vanityURLCode:               this.guild.vanityURLCode,
-                        verificationLevel:           this.guild.verificationLevel
+                        verificationLevel:           databaseEnums.verificationLevel[this.guild.verificationLevel]
                     }
                 }
             }
@@ -82,7 +82,7 @@ class Guild {
         let joinedTimestamp = this.guild.joinedTimestamp;
         joinedTimestamp = moment(joinedTimestamp).format('YYYY-MM-DD HH-mm-ss');
 
-        await prisma.Guilds.update({
+        await prisma.guilds.update({
             where: {
                 guildId: this.guild.id,
             },
@@ -97,13 +97,13 @@ class Guild {
                 memberCount:              this.guild.memberCount,
                 partnered:                this.guild.partnered,
                 premiumSubscriptionCount: this.guild.premiumSubscriptionCount,
-                premiumTier:              this.guild.premiumTier,
+                premiumTier:              databaseEnums.premiumTier[this.guild.premiumTier],
                 verified:                 this.guild.verified,
             }
         });
 
 
-        await prisma.GuildSettings.update({
+        await prisma.guildSettings.update({
             where: {
                 guildId: this.guild.id,
             },
@@ -112,11 +112,11 @@ class Guild {
                 afkChannelID:                this.guild.afkChannelId,
                 afkTimeout:                  this.guild.afkTimeout,
                 bannerURL:                   this.guild.bannerURL(),
-                defaultMessageNotifications: this.guild.defaultMessageNotifications,
+                defaultMessageNotifications: databaseEnums.defaultMessageNotifications[this.guild.defaultMessageNotifications],
                 description:                 this.guild.description,
-                explicitContentFilter:       this.guild.explicitContentFilter,
+                explicitContentFilter:       databaseEnums.explicitContentFilter[this.guild.explicitContentFilter],
                 iconURL:                     this.guild.iconURL(),
-                mfaLevel:                    this.guild.mfaLevel,
+                mfaLevel:                    databaseEnums.mfaLevel[this.guild.mfaLevel],
                 name:                        this.guild.name,
                 nameAcronym:                 this.guild.nameAcronym,
                 ownerID:                     this.guild.ownerId,
@@ -127,7 +127,7 @@ class Guild {
                 systemChannelID:             this.guild.systemChannelId,
                 publicUpdatesChannelId:      this.guild.publicUpdatesChannelId,
                 vanityURLCode:               this.guild.vanityURLCode,
-                verificationLevel:           this.guild.verificationLevel,
+                verificationLevel:           databaseEnums.verificationLevel[this.guild.verificationLevel],
             }
         });
 
@@ -135,7 +135,7 @@ class Guild {
     }
 
     async unavailableGuild() {
-        await prisma.Guilds.update({
+        await prisma.guilds.update({
             where: {
                 guildId: this.guild.id,
             },

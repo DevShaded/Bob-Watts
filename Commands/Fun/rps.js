@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder } = require('@discordjs/builders');
+const { SlashCommandBuilder } = require('discord.js');
 
 const data = new SlashCommandBuilder()
     .setName('rps')
@@ -57,9 +57,9 @@ module.exports = {
         }
 
         let embed = {
-            color:       '#17a2b8',
+            color:       0x17a2b8,
             description: `${responseMessage}`,
-            timestamp:   new Date(),
+            timestamp:   new Date().toISOString(),
             footer:      {
                 text: interaction.client.user.username
             }

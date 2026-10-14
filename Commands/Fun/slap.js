@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder } = require('@discordjs/builders');
+const { SlashCommandBuilder } = require('discord.js');
 
 const data = new SlashCommandBuilder()
     .setName('slap')
@@ -18,12 +18,11 @@ module.exports = {
         const mentioned = interaction.options.getUser('user');
 
         const embed = {
-            color:       '#17a2b8',
+            color:       0x17a2b8,
             description: `👏 <@${interaction.user.id}> slapped <@${mentioned.id}> hardly`,
-            timestamp:   new Date(),
+            timestamp:   new Date().toISOString(),
             footer:      {
-                text:     interaction.client.user.username,
-                icon_url: ''
+                text:     interaction.client.user.username
             }
         };
 

@@ -1,8 +1,10 @@
 'use strict';
 
-const { PrismaClient } = require('@prisma/client');
+const { MessageFlags } = require('discord.js');
+
 const moment = require("moment");
-const prisma = new PrismaClient();
+const prisma = require('../Database');
+const databaseEnums = require('../Discord/databaseEnums');
 
 class Moderator {
     constructor(interaction) {
@@ -18,7 +20,7 @@ class Moderator {
 
         if (!target) return this.interaction.reply({
             content:   'Sorry, I can\'t find this user!',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
 
         const user = await prisma.users.findUnique({
@@ -36,7 +38,7 @@ class Moderator {
         if (!user) await this.createUser(target);
         if (!userGuild) await this.createGuild();
 
-        const userModerator = await prisma.Moderators.findFirst({
+        const userModerator = await prisma.moderators.findFirst({
             where: {
                 guildId:   this.interaction.guild.id,
                 accountId: target.id
@@ -48,7 +50,7 @@ class Moderator {
         });
 
         if (!userModerator) {
-            await prisma.Moderators.create({
+            await prisma.moderators.create({
                 data: {
                     guildId:   this.interaction.guild.id,
                     accountId: target.id,
@@ -57,21 +59,21 @@ class Moderator {
             });
 
             const creatModerator = {
-                color:       '#28a745',
+                color:       0x28a745,
                 description: `<@${target.id}> is now a soft moderator of this server!`,
-                timestamp:   new Date(),
+                timestamp:   new Date().toISOString(),
                 footer:      {
                     text: this.interaction.client.user.username
                 }
             };
 
-            await this.interaction.reply({ embeds: [creatModerator], ephemeral: true });
+            await this.interaction.reply({ embeds: [creatModerator], flags: MessageFlags.Ephemeral });
 
             try {
                 const muteDMEmbed = {
-                    color:       '#ffc107',
+                    color:       0xffc107,
                     description: `You are now soft moderator in **${this.interaction.guild.name}** \n\n You can now use moderation commands like \`/warn\``,
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
@@ -82,14 +84,14 @@ class Moderator {
                 console.log(`Failed to DM ${target.tag}`, e)
             }
         } else {
-            await prisma.Moderators.deleteMany({
+            await prisma.moderators.deleteMany({
                 where: {
                     guildId:   this.interaction.guild.id,
                     accountId: target.id
                 }
             });
 
-            await prisma.Moderators.create({
+            await prisma.moderators.create({
                 data: {
                     guildId:   this.interaction.guild.id,
                     accountId: target.id,
@@ -98,21 +100,21 @@ class Moderator {
             });
 
             const alreadyModerator = {
-                color:       '#28a745',
+                color:       0x28a745,
                 description: `<@${target.id}> has now been updated to soft moderator of this server!`,
-                timestamp:   new Date(),
+                timestamp:   new Date().toISOString(),
                 footer:      {
                     text: this.interaction.client.user.username
                 }
             };
 
-            await this.interaction.reply({ embeds: [alreadyModerator], ephemeral: true });
+            await this.interaction.reply({ embeds: [alreadyModerator], flags: MessageFlags.Ephemeral });
 
             try {
                 const muteDMEmbed = {
-                    color:       '#ffc107',
+                    color:       0xffc107,
                     description: `You have been updated to soft moderator in **${this.interaction.guild.name}** \n\n You can now use moderation commands like \`/warn\``,
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
@@ -134,7 +136,7 @@ class Moderator {
 
         if (!target) return this.interaction.reply({
             content:   'Sorry, I can\'t find this user!',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
 
         const user = await prisma.users.findUnique({
@@ -152,7 +154,7 @@ class Moderator {
         if (!user) await this.createUser(target);
         if (!userGuild) await this.createGuild();
 
-        const userModerator = await prisma.Moderators.findFirst({
+        const userModerator = await prisma.moderators.findFirst({
             where: {
                 guildId:   this.interaction.guild.id,
                 accountId: target.id
@@ -164,7 +166,7 @@ class Moderator {
         });
 
         if (!userModerator) {
-            await prisma.Moderators.create({
+            await prisma.moderators.create({
                 data: {
                     guildId:   this.interaction.guild.id,
                     accountId: target.id,
@@ -173,21 +175,21 @@ class Moderator {
             });
 
             const creatModerator = {
-                color:       '#28a745',
+                color:       0x28a745,
                 description: `<@${target.id}> is now a moderator of this server!`,
-                timestamp:   new Date(),
+                timestamp:   new Date().toISOString(),
                 footer:      {
                     text: this.interaction.client.user.username
                 }
             };
 
-            await this.interaction.reply({ embeds: [creatModerator], ephemeral: true });
+            await this.interaction.reply({ embeds: [creatModerator], flags: MessageFlags.Ephemeral });
 
             try {
                 const muteDMEmbed = {
-                    color:       '#ffc107',
+                    color:       0xffc107,
                     description: `You are now moderator in **${this.interaction.guild.name}** \n\n You can now use moderation commands like \`/ban\`,  \`/clean\`, \`/kick\`, \`/mute\`, \`/unban\`, \`/unmute\`, \`/warn\``,
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
@@ -198,14 +200,14 @@ class Moderator {
                 console.log(`Failed to DM ${target.tag}`, e)
             }
         } else {
-            await prisma.Moderators.deleteMany({
+            await prisma.moderators.deleteMany({
                 where: {
                     guildId:   this.interaction.guild.id,
                     accountId: target.id
                 }
             });
 
-            await prisma.Moderators.create({
+            await prisma.moderators.create({
                 data: {
                     guildId:   this.interaction.guild.id,
                     accountId: target.id,
@@ -214,21 +216,21 @@ class Moderator {
             });
 
             const alreadyModerator = {
-                color:       '#28a745',
+                color:       0x28a745,
                 description: `<@${target.id}> has now been updated to moderator of this server!`,
-                timestamp:   new Date(),
+                timestamp:   new Date().toISOString(),
                 footer:      {
                     text: this.interaction.client.user.username
                 }
             };
 
-            await this.interaction.reply({ embeds: [alreadyModerator], ephemeral: true });
+            await this.interaction.reply({ embeds: [alreadyModerator], flags: MessageFlags.Ephemeral });
 
             try {
                 const muteDMEmbed = {
-                    color:       '#ffc107',
+                    color:       0xffc107,
                     description: `You have been updated to moderator in **${this.interaction.guild.name}** \n\n You can now use moderation commands like \`/ban\`,  \`/clean\`, \`/kick\`, \`/mute\`, \`/unban\`, \`/unmute\`, \`/warn\``,
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
@@ -250,7 +252,7 @@ class Moderator {
 
         if (!target) return this.interaction.reply({
             content:   'Sorry, I can\'t find this user!',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
 
         const user = await prisma.users.findUnique({
@@ -268,7 +270,7 @@ class Moderator {
         if (!user) await this.createUser(target);
         if (!userGuild) await this.createGuild();
 
-        const userModerator = await prisma.Moderators.findFirst({
+        const userModerator = await prisma.moderators.findFirst({
             where: {
                 guildId:   this.interaction.guild.id,
                 accountId: target.id
@@ -280,7 +282,7 @@ class Moderator {
         });
 
         if (!userModerator) {
-            await prisma.Moderators.create({
+            await prisma.moderators.create({
                 data: {
                     guildId:   this.interaction.guild.id,
                     accountId: target.id,
@@ -289,21 +291,21 @@ class Moderator {
             });
 
             const creatModerator = {
-                color:       '#28a745',
+                color:       0x28a745,
                 description: `<@${target.id}> is now an administrator of this server!`,
-                timestamp:   new Date(),
+                timestamp:   new Date().toISOString(),
                 footer:      {
                     text: this.interaction.client.user.username
                 }
             };
 
-            await this.interaction.reply({ embeds: [creatModerator], ephemeral: true });
+            await this.interaction.reply({ embeds: [creatModerator], flags: MessageFlags.Ephemeral });
 
             try {
                 const muteDMEmbed = {
-                    color:       '#ffc107',
+                    color:       0xffc107,
                     description: `You are now administrator in **${this.interaction.guild.name}** \n\n You can now use moderation commands like \`/ban\`,  \`/clean\`, \`/clearinfraction\`, \`/kick\`, \`/mute\`, \`/unban\`, \`/unmute\`, \`/warn\``,
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
@@ -314,14 +316,14 @@ class Moderator {
                 console.log(`Failed to DM ${target.tag}`, e)
             }
         } else {
-            await prisma.Moderators.deleteMany({
+            await prisma.moderators.deleteMany({
                 where: {
                     guildId:   this.interaction.guild.id,
                     accountId: target.id
                 }
             });
 
-            await prisma.Moderators.create({
+            await prisma.moderators.create({
                 data: {
                     guildId:   this.interaction.guild.id,
                     accountId: target.id,
@@ -330,21 +332,21 @@ class Moderator {
             });
 
             const alreadyModerator = {
-                color:       '#28a745',
+                color:       0x28a745,
                 description: `<@${target.id}> has now been updated to administrator of this server!`,
-                timestamp:   new Date(),
+                timestamp:   new Date().toISOString(),
                 footer:      {
                     text: this.interaction.client.user.username
                 }
             };
 
-            await this.interaction.reply({ embeds: [alreadyModerator], ephemeral: true });
+            await this.interaction.reply({ embeds: [alreadyModerator], flags: MessageFlags.Ephemeral });
 
             try {
                 const muteDMEmbed = {
-                    color:       '#ffc107',
+                    color:       0xffc107,
                     description: `You have been updated to administrator in **${this.interaction.guild.name}** \n\n You can now use moderation commands like \`/ban\`, \`/clean\`, \`/clearinfraction\`, \`/kick\`, \`/mute\`, \`/unban\`, \`/unmute\`, \`/warn\``,
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
@@ -366,7 +368,7 @@ class Moderator {
 
         if (!target) return this.interaction.reply({
             content:   'Sorry, I can\'t find this user!',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
 
         const user = await prisma.users.findUnique({
@@ -384,7 +386,7 @@ class Moderator {
         if (!user) await this.createUser(target);
         if (!userGuild) await this.createGuild();
 
-        const userModerator = await prisma.Moderators.findFirst({
+        const userModerator = await prisma.moderators.findFirst({
             where: {
                 guildId:   this.interaction.guild.id,
                 accountId: target.id,
@@ -398,17 +400,17 @@ class Moderator {
 
         if (!userModerator) {
             const noModerator = {
-                color:       '#ff0033',
+                color:       0xff0033,
                 description: `<@${target.id}> is not a Soft Moderator in this server!`,
-                timestamp:   new Date(),
+                timestamp:   new Date().toISOString(),
                 footer:      {
                     text: this.interaction.client.user.username
                 }
             };
 
-            await this.interaction.reply({ embeds: [noModerator], ephemeral: true });
+            await this.interaction.reply({ embeds: [noModerator], flags: MessageFlags.Ephemeral });
         } else {
-            await prisma.Moderators.deleteMany({
+            await prisma.moderators.deleteMany({
                 where: {
                     guildId:   this.interaction.guild.id,
                     accountId: target.id
@@ -416,21 +418,21 @@ class Moderator {
             });
 
             const removedModerator = {
-                color:       '#28a745',
+                color:       0x28a745,
                 description: `<@${target.id}> has now been removed as Soft Moderator in this server`,
-                timestamp:   new Date(),
+                timestamp:   new Date().toISOString(),
                 footer:      {
                     text: this.interaction.client.user.username
                 },
             };
 
-            await this.interaction.reply({ embeds: [removedModerator], ephemeral: true });
+            await this.interaction.reply({ embeds: [removedModerator], flags: MessageFlags.Ephemeral });
 
             try {
                 const muteDMEmbed = {
-                    color:       '#ffc107',
+                    color:       0xffc107,
                     description: `Your role as Soft Moderator has been removed in **${this.interaction.guild.name}**`,
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
@@ -452,7 +454,7 @@ class Moderator {
 
         if (!target) return this.interaction.reply({
             content:   'Sorry, I can\'t find this user!',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
 
         const user = await prisma.users.findUnique({
@@ -470,7 +472,7 @@ class Moderator {
         if (!user) await this.createUser(target);
         if (!userGuild) await this.createGuild();
 
-        const userModerator = await prisma.Moderators.findFirst({
+        const userModerator = await prisma.moderators.findFirst({
             where: {
                 guildId:   this.interaction.guild.id,
                 accountId: target.id,
@@ -484,17 +486,17 @@ class Moderator {
 
         if (!userModerator) {
             const noModerator = {
-                color:       '#ff0033',
+                color:       0xff0033,
                 description: `<@${target.id}> is not a Moderator in this server!`,
-                timestamp:   new Date(),
+                timestamp:   new Date().toISOString(),
                 footer:      {
                     text: this.interaction.client.user.username
                 }
             };
 
-            await this.interaction.reply({ embeds: [noModerator], ephemeral: true });
+            await this.interaction.reply({ embeds: [noModerator], flags: MessageFlags.Ephemeral });
         } else {
-            await prisma.Moderators.deleteMany({
+            await prisma.moderators.deleteMany({
                 where: {
                     guildId:   this.interaction.guild.id,
                     accountId: target.id
@@ -502,21 +504,21 @@ class Moderator {
             });
 
             const removedModerator = {
-                color:       '#28a745',
+                color:       0x28a745,
                 description: `<@${target.id}> has now been removed as Moderator in this server`,
-                timestamp:   new Date(),
+                timestamp:   new Date().toISOString(),
                 footer:      {
                     text: this.interaction.client.user.username
                 },
             };
 
-            await this.interaction.reply({ embeds: [removedModerator], ephemeral: true });
+            await this.interaction.reply({ embeds: [removedModerator], flags: MessageFlags.Ephemeral });
 
             try {
                 const muteDMEmbed = {
-                    color:       '#ffc107',
+                    color:       0xffc107,
                     description: `Your role as Moderator has been removed in **${this.interaction.guild.name}**`,
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
@@ -538,7 +540,7 @@ class Moderator {
 
         if (!target) return this.interaction.reply({
             content:   'Sorry, I can\'t find this user!',
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
 
         const user = await prisma.users.findUnique({
@@ -556,7 +558,7 @@ class Moderator {
         if (!user) await this.createUser(target);
         if (!userGuild) await this.createGuild();
 
-        const userModerator = await prisma.Moderators.findFirst({
+        const userModerator = await prisma.moderators.findFirst({
             where: {
                 guildId:   this.interaction.guild.id,
                 accountId: target.id,
@@ -570,17 +572,17 @@ class Moderator {
 
         if (!userModerator) {
             const noModerator = {
-                color:       '#ff0033',
+                color:       0xff0033,
                 description: `<@${target.id}> is not a Administrator in this server!`,
-                timestamp:   new Date(),
+                timestamp:   new Date().toISOString(),
                 footer:      {
                     text: this.interaction.client.user.username
                 }
             };
 
-            await this.interaction.reply({ embeds: [noModerator], ephemeral: true });
+            await this.interaction.reply({ embeds: [noModerator], flags: MessageFlags.Ephemeral });
         } else {
-            await prisma.Moderators.deleteMany({
+            await prisma.moderators.deleteMany({
                 where: {
                     guildId:   this.interaction.guild.id,
                     accountId: target.id
@@ -588,21 +590,21 @@ class Moderator {
             });
 
             const removedModerator = {
-                color:       '#28a745',
+                color:       0x28a745,
                 description: `<@${target.id}> has now been removed as Administrator in this server`,
-                timestamp:   new Date(),
+                timestamp:   new Date().toISOString(),
                 footer:      {
                     text: this.interaction.client.user.username
                 },
             };
 
-            await this.interaction.reply({ embeds: [removedModerator], ephemeral: true });
+            await this.interaction.reply({ embeds: [removedModerator], flags: MessageFlags.Ephemeral });
 
             try {
                 const muteDMEmbed = {
-                    color:       '#ffc107',
+                    color:       0xffc107,
                     description: `Your role as Administrator has been removed in **${this.interaction.guild.name}**`,
-                    timestamp:   new Date(),
+                    timestamp:   new Date().toISOString(),
                     footer:      {
                         text: this.interaction.client.user.username,
                     },
@@ -624,7 +626,7 @@ class Moderator {
                 accountId:        target.id,
                 username:         target.username,
                 discriminator:    target.discriminator,
-                avatar:           target.avatarURL({ dynamic: true }),
+                avatar:           target.avatarURL({ forceStatic: false }),
                 bot:              target.bot,
                 createdTimestamp: createdTimestamp
             }
@@ -638,7 +640,7 @@ class Moderator {
         let joinedTimestamp = this.interaction.guild.joinedTimestamp;
         joinedTimestamp = moment(joinedTimestamp).format('YYYY-MM-DD HH-mm-ss');
 
-        await prisma.Guilds.create({
+        await prisma.guilds.create({
             data: {
                 guildId:                  this.interaction.guild.id,
                 available:                this.interaction.guild.available,
@@ -650,19 +652,19 @@ class Moderator {
                 memberCount:              this.interaction.guild.memberCount,
                 partnered:                this.interaction.guild.partnered,
                 premiumSubscriptionCount: this.interaction.guild.premiumSubscriptionCount,
-                premiumTier:              this.interaction.guild.premiumTier,
+                premiumTier:              databaseEnums.premiumTier[this.interaction.guild.premiumTier],
                 verified:                 this.interaction.guild.verified,
 
                 GuildSettings: {
                     create: {
                         afkChannelID:                this.interaction.guild.afkChannelId,
                         afkTimeout:                  this.interaction.guild.afkTimeout,
-                        bannerURL:                   this.interaction.guild.bannerURL({ dynamic: true }),
-                        defaultMessageNotifications: this.interaction.guild.defaultMessageNotifications,
+                        bannerURL:                   this.interaction.guild.bannerURL({ forceStatic: false }),
+                        defaultMessageNotifications: databaseEnums.defaultMessageNotifications[this.interaction.guild.defaultMessageNotifications],
                         description:                 this.interaction.guild.description,
-                        explicitContentFilter:       this.interaction.guild.explicitContentFilter,
-                        iconURL:                     this.interaction.guild.iconURL({ dynamic: true }),
-                        mfaLevel:                    this.interaction.guild.mfaLevel,
+                        explicitContentFilter:       databaseEnums.explicitContentFilter[this.interaction.guild.explicitContentFilter],
+                        iconURL:                     this.interaction.guild.iconURL({ forceStatic: false }),
+                        mfaLevel:                    databaseEnums.mfaLevel[this.interaction.guild.mfaLevel],
                         name:                        this.interaction.guild.name,
                         nameAcronym:                 this.interaction.guild.nameAcronym,
                         ownerID:                     this.interaction.guild.ownerId,
@@ -673,7 +675,7 @@ class Moderator {
                         systemChannelID:             this.interaction.guild.systemChannelId,
                         publicUpdatesChannelId:      this.interaction.guild.publicUpdatesChannelId,
                         vanityURLCode:               this.interaction.guild.vanityURLCode,
-                        verificationLevel:           this.interaction.guild.verificationLevel
+                        verificationLevel:           databaseEnums.verificationLevel[this.interaction.guild.verificationLevel]
                     }
                 }
             }

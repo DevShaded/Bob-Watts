@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder } = require('@discordjs/builders');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 
 const data = new SlashCommandBuilder()
     .setName('kiss')
@@ -18,7 +18,7 @@ module.exports = {
         const mentioned = interaction.options.getUser('user');
 
         if (!mentioned) {
-            return interaction({ contents: 'Could not find that user!', ephemeral: true });
+            return interaction.reply({ content: 'Could not find that user!', flags: MessageFlags.Ephemeral });
         }
 
         const kisses = [
@@ -30,12 +30,11 @@ module.exports = {
         const answer = kisses[Math.floor(Math.random() * kisses.length)];
 
         const embed = {
-            color:       '#17a2b8',
+            color:       0x17a2b8,
             description: `💋 <@${interaction.user.id}> kissed <@${mentioned.id}> ${answer}`,
-            timestamp:   new Date(),
+            timestamp:   new Date().toISOString(),
             footer:      {
-                text:     interaction.client.user.username,
-                icon_url: ''
+                text:     interaction.client.user.username
             }
         };
 

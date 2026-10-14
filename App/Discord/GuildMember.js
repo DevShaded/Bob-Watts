@@ -1,7 +1,6 @@
 'use strict';
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../Database');
 const moment = require('moment');
 const Guild = require("../Discord/Guild");
 
@@ -46,13 +45,13 @@ class GuildMember {
                 accountId:        this.member.user.id,
                 username:         this.member.user.username,
                 discriminator:    this.member.user.discriminator,
-                avatar:           this.member.user.avatarURL({ dynamic: true }),
+                avatar:           this.member.user.avatarURL({ forceStatic: false }),
                 bot:              this.member.user.bot,
                 createdTimestamp: createdTimestamp
             }
         });
 
-        await prisma.Guilds.update({
+        await prisma.guilds.update({
             where: {
                 guildId: this.member.guild.id,
             },
@@ -78,7 +77,7 @@ class GuildMember {
                 accountId:        this.member.user.id,
                 username:         this.member.user.username,
                 discriminator:    this.member.user.discriminator,
-                avatar:           this.member.user.avatarURL({ dynamic: true }),
+                avatar:           this.member.user.avatarURL({ forceStatic: false }),
                 bot:              this.member.user.bot,
                 createdTimestamp: createdTimestamp,
             },
@@ -89,7 +88,7 @@ class GuildMember {
 
     async deleteGuildMember() {
         // Update the member count when a user leaves the guild
-        await prisma.Guilds.update({
+        await prisma.guilds.update({
             where: {
                 guildId: this.member.guild.id,
             },

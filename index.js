@@ -1,14 +1,13 @@
 'use strict';
 
 // Require the necessary discord.js classes
-const { Client, Intents, Collection, MessageActionRow, MessageButton } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, Events, ActivityType, Collection, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 
 // Require dotenv to read the .env file
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
 
 // Require Prisma for the database
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('./App/Database');
 
 // The necessary classes the application uses
 const Message = require('./App/Discord/Message');
@@ -17,27 +16,27 @@ const Message = require('./App/Discord/Message');
 const client = new Client({
     // Necessary intents permissions
     intents: [
-        Intents.FLAGS.GUILDS,
-        Intents.FLAGS.GUILD_MEMBERS,
-        Intents.FLAGS.GUILD_BANS,
-        Intents.FLAGS.GUILD_EMOJIS_AND_STICKERS,
-        Intents.FLAGS.GUILD_INTEGRATIONS,
-        Intents.FLAGS.GUILD_WEBHOOKS,
-        Intents.FLAGS.GUILD_INVITES,
-        Intents.FLAGS.GUILD_VOICE_STATES,
-        Intents.FLAGS.GUILD_PRESENCES,
-        Intents.FLAGS.GUILD_MESSAGES,
-        Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
-        Intents.FLAGS.GUILD_MESSAGE_TYPING,
-        Intents.FLAGS.GUILD_MESSAGES,
-        Intents.FLAGS.DIRECT_MESSAGE_REACTIONS,
-        Intents.FLAGS.DIRECT_MESSAGE_TYPING
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildModeration,
+        GatewayIntentBits.GuildExpressions,
+        GatewayIntentBits.GuildIntegrations,
+        GatewayIntentBits.GuildWebhooks,
+        GatewayIntentBits.GuildInvites,
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildPresences,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.GuildMessageTyping,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.DirectMessageReactions,
+        GatewayIntentBits.DirectMessageTyping
     ],
 
     partials: [
-        'MESSAGE',
-        'CHANNEL',
-        'REACTION'
+        Partials.Message,
+        Partials.Channel,
+        Partials.Reaction
     ],
 
     allowedMentions: { parse: ['users', 'roles'], repliedUser: true },
@@ -112,10 +111,10 @@ try {
 }
 
 // When the client is ready, run this code (only once)
-client.once('ready', async () => {
+client.once(Events.ClientReady, async () => {
     console.log('\x1b[32mBot has succesfully signed in and is listening to events\x1b[0m');
 
-    const botActivity = await prisma.Bot.findMany({
+    const botActivity = await prisma.bot.findMany({
         orderBy: [
             {
                 id: 'desc'
@@ -124,15 +123,24 @@ client.once('ready', async () => {
     });
 
     if (!botActivity.length) {
-        await client.user.setActivity('devshaded.com/bobwatts', { type: 'WATCHING' });
+        await client.user.setActivity('devshaded.com/bobwatts', { type: ActivityType.Watching });
     } else {
-        await client.user.setActivity(`${botActivity[0].name}`, { type: botActivity[0].activity });
+        const activity = botActivity[0];
+        const activityTypes = {
+            PLAYING: ActivityType.Playing, STREAMING: ActivityType.Streaming,
+            LISTENING: ActivityType.Listening, WATCHING: ActivityType.Watching,
+            CUSTOM: ActivityType.Custom, COMPETING: ActivityType.Competing,
+        };
+        client.user.setActivity(activity.name, {
+            type: activityTypes[activity.type] ?? ActivityType.Playing,
+            url: activity.url ?? undefined,
+        });
     }
 });
 
 // Interaction Create - Emitted when an interaction is created.
 client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isCommand()) return;
+    if (!interaction.isChatInputCommand()) return;
 
     const { commandName } = interaction;
 
@@ -143,7 +151,14 @@ client.on('interactionCreate', async (interaction) => {
         await slashCommand.execute(interaction);
     } catch (error) {
         console.error(error);
-        await interaction.reply({ content: 'Well that didn\'t work, try another command maybe?', ephemeral: true });
+        const response = { content: 'Well that didn\'t work, try another command maybe?' };
+        if (interaction.deferred && !interaction.replied) {
+            await interaction.editReply(response);
+        } else if (interaction.replied) {
+            await interaction.followUp({ ...response, flags: MessageFlags.Ephemeral });
+        } else {
+            await interaction.reply({ ...response, flags: MessageFlags.Ephemeral });
+        }
     }
 });
 
@@ -156,19 +171,19 @@ client.on('messageCreate', async (message) => {
     }
 
     if (message.content.startsWith('!help')) {
-        const row = new MessageActionRow()
+        const row = new ActionRowBuilder()
             .addComponents(
-                new MessageButton()
-                    .setStyle('LINK')
+                new ButtonBuilder()
+                    .setStyle(ButtonStyle.Link)
                     .setURL('https://devshaded.com/bobwatts')
                     .setLabel('Invite Link'),
             );
 
         const embed = {
-            color: '#17a2b8',
+            color: 0x17a2b8,
             title: 'Announcement',
             description: 'As of <t:1654293600:F>, the Bob Watts dev team has decided to remove message commands, and replaced them with slash commands. If you can\'t find any slash commands from Bob Watts, then you need to re-add the bot to the server!',
-            timestamp: new Date(),
+            timestamp: new Date().toISOString(),
             footer:      {
                 text: client.user.username
             }

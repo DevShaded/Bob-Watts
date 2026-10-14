@@ -2,8 +2,7 @@
 
 const VerificationLevel = require('../../App/Commands/VerificationLevel');
 const Moderator = require('../../App/Commands/Moderator');
-const { Permissions } = require('discord.js');
-const { SlashCommandBuilder } = require('@discordjs/builders');
+const { PermissionFlagsBits, MessageFlags, SlashCommandBuilder } = require('discord.js');
 
 const data = new SlashCommandBuilder()
     .setName('delete')
@@ -37,7 +36,7 @@ module.exports = {
         let removeModerator = new Moderator(interaction);
 
         // If the user have enough permissions, continue
-        if (executor.permissions.has(Permissions.FLAGS.ADMINISTRATOR)) {
+        if (executor.permissions.has(PermissionFlagsBits.Administrator)) {
             switch (interaction.options.getSubcommand()) {
                 case 'softmoderator':
                     await removeModerator.deleteSoftModerator();
@@ -69,7 +68,7 @@ module.exports = {
                 // If the user does have not enough permissions, return message with no permissions
                 return interaction.reply({
                     content:   'You dont have **ADMINISTRATOR** permission enabled, so you can\'t run this command!',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
         }

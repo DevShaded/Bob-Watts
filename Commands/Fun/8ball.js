@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder } = require('@discordjs/builders');
+const { SlashCommandBuilder } = require('discord.js');
 
 const data = new SlashCommandBuilder()
     .setName('8ball')
@@ -44,7 +44,7 @@ module.exports = {
         const message = interaction.options.getString('message');
 
         const embed = {
-            color:       '#17a2b8',
+            color:       0x17a2b8,
             description: `:8ball: <@${interaction.user.id}>, ${fortune[answer]}`,
             footer:      {
                 text: `Original message: ${message}`

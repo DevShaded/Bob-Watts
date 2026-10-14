@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder } = require('@discordjs/builders');
+const { SlashCommandBuilder } = require('discord.js');
 
 const data = new SlashCommandBuilder()
     .setName('ping')
@@ -14,20 +14,19 @@ module.exports = {
         let embedColor;
 
         if (interaction.client.ws.ping <= 450) {
-            embedColor = '#28a745';
+            embedColor = 0x28a745;
         } else if (interaction.client.ws.ping > 450 && interaction.client.ws.ping < 750) {
-            embedColor = '#FF6000';
+            embedColor = 0xFF6000;
         } else {
-            embedColor = '#dc3545';
+            embedColor = 0xdc3545;
         }
 
         const pingEmbed = {
             color:       embedColor,
             description: `🏓 Pong - ${Math.floor(interaction.client.ws.ping).toLocaleString()} milliseconds.`,
-            timestamp:   new Date(),
+            timestamp:   new Date().toISOString(),
             footer:      {
                 text:     interaction.client.user.username,
-                icon_url: '',
             }
         };
 

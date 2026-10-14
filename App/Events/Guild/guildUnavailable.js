@@ -17,9 +17,9 @@ module.exports = {
             const messageChannel = messageGuild.channels.cache.get(channelId);
 
             const embed = {
-                color:       '#dc3545',
+                color:       0xdc3545,
                 description: `**${guild.name}** is now unavailable`,
-                timestamp:   new Date(),
+                timestamp:   new Date().toISOString(),
                 footer:      {
                     text: guild.client.user.username,
                 },

@@ -1,8 +1,7 @@
 'use strict';
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-const { SlashCommandBuilder } = require('@discordjs/builders');
+const prisma = require('../../App/Database');
+const { SlashCommandBuilder } = require('discord.js');
 const Message = require('../../App/Discord/Message');
 
 const data = new SlashCommandBuilder()
@@ -111,12 +110,12 @@ module.exports = {
         }
 
         const embed = {
-            color:       '#17a2b8',
+            color:       0x17a2b8,
             title:       getGuild['GuildSettings'][0].name,
             description: getGuild['GuildSettings'][0].description ?? 'This server does not have any description!',
-            thumbnail:   {
-                url: `${getGuild['GuildSettings'][0].iconURL}` ?? '',
-            },
+            thumbnail: getGuild.GuildSettings[0].iconURL
+                ? { url: getGuild.GuildSettings[0].iconURL }
+                : undefined,
             fields:      [
                 {
                     name:  `${serverOwnerEmoji} Server Owner`,
@@ -198,7 +197,7 @@ module.exports = {
                     inline: false,
                 },
             ],
-            timestamp:   new Date(),
+            timestamp:   new Date().toISOString(),
             footer:      {
                 text: interaction.client.user.username,
             },

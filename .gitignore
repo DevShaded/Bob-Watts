@@ -1,6 +1,7 @@
 node_modules
-prisma/migrations
 # Keep environment variables out of version control
 .env
+*.swp
+*.swo
 .idea
 .vscode

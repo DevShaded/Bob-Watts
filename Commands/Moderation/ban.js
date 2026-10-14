@@ -1,7 +1,6 @@
 'use strict';
 
-const { Permissions } = require('discord.js');
-const { SlashCommandBuilder } = require('@discordjs/builders');
+const { PermissionFlagsBits, MessageFlags, SlashCommandBuilder } = require('discord.js');
 const Moderation = require("../../App/Commands/Moderation");
 const VerificationLevel = require('../../App/Commands/VerificationLevel')
 
@@ -17,7 +16,7 @@ const data = new SlashCommandBuilder()
             .setDescription('Delete message history')
             .addChoices({
                     "name":  '0 Days',
-                    "value": 1
+                    "value": 0
                 },
                 {
                     "name":  '1 Days',
@@ -67,7 +66,7 @@ module.exports = {
         let executor = await interaction.guild.members.fetch(interaction.user.id);
 
         // If the user have enough permissions, continue
-        if (executor.permissions.has(Permissions.FLAGS.BAN_MEMBERS)) {
+        if (executor.permissions.has(PermissionFlagsBits.BanMembers)) {
             await moderationAction.getAction();
         } else {
             let verificationLevel = new VerificationLevel(interaction, 2);
@@ -79,7 +78,7 @@ module.exports = {
                 // If the user does have not enough permissions, return message with no permissions
                 return interaction.reply({
                     content:   'You do not have permission to **BAN_MEMBERS**, so you can\'t run this command!',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
         }
