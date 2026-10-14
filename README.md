@@ -89,6 +89,14 @@ Tests exercise command payloads, permissions, ban history deletion, stored enum
 values, startup, and command registration with mocked network/database calls.
 Live command execution still needs a test Discord server.
 
+`index.js` exports `startBot()`, which resolves to the client after login.
+`createapplicationcommands.js` exports `registerCommands(env = process.env)`,
+which resolves after registration and rejects on configuration or API failures.
+Importing either entrypoint does not load `.env`, log in, register commands, or
+initialize the database. The CLI commands still load `.env` and call these
+operations explicitly. Tests invoke them repeatedly with external services
+stubbed, without clearing the CommonJS module cache.
+
 As of October 14, 2026, the runtime dependency audit reports zero vulnerabilities.
 The full audit reports three high findings along the optional PM2 dependency
 chain `pm2 > chokidar > braces`, caused by the same
