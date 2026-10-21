@@ -71,6 +71,26 @@ Behavior corrections covered through dispatch:
 
 Offline tests cover authorization across all four commands, every setting's creation/update/removal fields, missing configuration, moderator level replacement and exact-level deletion, blocked DMs, initialization relationships and stored enum values, and guild/global registration payloads.
 
+## Moderation commands checkpoint (#32)
+
+All ten Moderation commands are registered as strict TypeScript definitions, with every option checked against captured legacy serialization. `Commands` and `App` remain unchanged for comparison until #34. Discord permission alternatives, stored moderator levels, bot self-protections, infraction type strings, zero-day ban history, notifications, and configured logging remain covered through startup/dispatch.
+
+Command context exposes a narrow moderation database provider, member resolver, scheduler, and error reporter. Production resolves real guild members through the Discord gateway and shares the owned Prisma client with settings and event persistence. Tests supply those external capabilities without pretending permission-only members are full Discord members. The database opens lazily and closes when the gateway shuts down.
+
+Behavior corrections covered through dispatch:
+
+- Stored moderators can unban by string account ID without resolving a guild member. Unknown-ban responses remain controlled.
+- Ban and kick reject every ineligible member; the legacy guard incorrectly required that member to also be the bot.
+- Missing mute settings, missing or non-message log channels, and disconnected voice members no longer cause unchecked resource access.
+- New user timestamps come from the Discord user rather than a nonexistent member creation timestamp; unknown member join dates display as unknown.
+- Replies respect unanswered, deferred, and answered interactions. Cleaning selects private visibility when deferring and reports failures without claiming deletion succeeded.
+- Cleaning and infraction clearing report the number actually removed. Infraction-clear notifications correctly identify infractions rather than messages.
+- Long histories use bounded embed fields and private follow-ups. Displayed reasons respect Discord field and description limits while stored reasons remain intact.
+- Mute durations reject invalid values, split delays beyond Node's timer limit, and store indefinite expiration as `null` rather than strings such as `null day(s)`.
+- Completed action records are persisted before optional logging, so a log-send failure does not discard the infraction. Closed DMs do not hide successful moderation.
+
+Timed mutes retain the existing in-memory scheduling model; restarting the process still loses pending timers. Discord actions and database writes remain separate external operations.
+
 ## Guild, member, and message checkpoint (#33)
 
 The typed application registers all seven existing guild/member events, plus message delivery, client readiness, and interaction dispatch. Readiness remains one-time; the other events repeat. `/serverinfo` joins the shared Public command registry. Legacy JavaScript remains until #34.

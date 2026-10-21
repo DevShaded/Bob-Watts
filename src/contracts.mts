@@ -1,9 +1,11 @@
+import type { ModerationChannel, ModerationDatabase, ModerationMember, ModerationSchedule } from './moderation-contracts.mjs';
 import type { ReadyClient, GuildState, MemberState, RemovedMember, MessageState, SendLog, GetGuildInformation } from './event-resources.mjs';
 import type { Persistence } from './persistence.mjs';
 import type { SettingsDatabase } from './settings-database.mjs';
 import type {
     ClientOptions,
     InteractionEditReplyOptions,
+    InteractionDeferReplyOptions,
     InteractionReplyOptions,
     RESTPostAPIChatInputApplicationCommandsJSONBody,
     User,
@@ -40,13 +42,14 @@ export interface CommandInteraction {
     readonly commandName: string;
     readonly client: {
         readonly ws: { readonly ping: number };
-        readonly user: Pick<User, 'username' | 'createdAt' | 'displayAvatarURL'> | null;
+        readonly user: (Pick<User, 'username' | 'createdAt' | 'displayAvatarURL'> & { readonly id?: string }) | null;
         readonly emojis: { readonly cache: ReadonlyMap<string, { toString(): string }> };
         readonly guilds: { readonly cache: { readonly size: number } };
         readonly users: { readonly cache: { readonly size: number } };
     };
     readonly user: CommandUser;
     readonly options: {
+        getInteger?(name: string): number | null;
         getSubcommand(): string;
         getChannel(name: string): { readonly id: string; readonly type: ChannelType } | null;
         getRole(name: string): { readonly id: string } | null;
@@ -54,6 +57,8 @@ export interface CommandInteraction {
         getUser(name: string): CommandUser | null;
     };
     readonly guild: CommandGuild | null;
+    readonly channel?: ModerationChannel | null;
+    deferReply?(options?: InteractionDeferReplyOptions): Promise<unknown>;
     readonly deferred: boolean;
     readonly replied: boolean;
     reply(options: InteractionReplyOptions): Promise<unknown>;
@@ -73,8 +78,12 @@ export type CommandGuild = Pick<Guild,
     readonly members: {
         readonly cache: ReadonlyMap<string, CommandMember>;
         fetch(id: string): Promise<{ readonly permissions: Pick<PermissionsBitField, 'has'> } | null>;
+        unban?(id: string): Promise<unknown>;
     };
+    readonly channels?: { readonly cache: ReadonlyMap<string, ModerationChannel> };
 };
+
+export type GetModerationMember = (guildId: string, userId: string) => Promise<ModerationMember | null>;
 
 export interface CommandMetadata {
     readonly category: CommandCategory;
@@ -87,6 +96,10 @@ export interface HttpTransport {
 
 export interface CommandContext {
     readonly commands: readonly CommandMetadata[];
+    readonly database?: () => ModerationDatabase;
+    readonly schedule?: ModerationSchedule;
+    readonly getModerationMember?: GetModerationMember;
+    readonly reportError?: (error: unknown) => void;
     readonly persistence?: Persistence;
     readonly getGuildInformation?: GetGuildInformation | undefined;
     readonly getDatabase?: () => SettingsDatabase;
@@ -123,6 +136,7 @@ export type RegisteredEvent = {
 }[keyof EventArguments];
 
 export interface Gateway {
+    getModerationMember?: GetModerationMember;
     sendLog?: SendLog;
     getGuildInformation?: GetGuildInformation;
     subscribe(event: RegisteredEvent, reportError: (error: unknown) => void): void;

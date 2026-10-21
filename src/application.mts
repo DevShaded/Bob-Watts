@@ -1,10 +1,11 @@
+import type { ModerationDatabase, ModerationSchedule } from './moderation-contracts.mjs';
 import { createPersistence } from './persistence.mjs';
 import type { Persistence } from './persistence.mjs';
 import { createDatabase } from './database.mjs';
 import type { SettingsDatabase } from './settings-database.mjs';
 import { GatewayIntentBits, Partials, REST, Routes } from 'discord.js';
 import { readRegistrationConfig, readStartupConfig } from './configuration.mjs';
-import type { Environment } from './configuration.mjs';
+import type { DatabaseConfig, Environment } from './configuration.mjs';
 import type { Command, HttpTransport, Gateway, GatewayFactory, RestFactory } from './contracts.mjs';
 import { createDiscordGateway } from './discord.mjs';
 import { commands, createEvents } from './registry.mjs';
@@ -13,6 +14,8 @@ export async function startBot({
     database,
     env = process.env,
     createGateway = createDiscordGateway,
+    createCommandDatabase,
+    schedule,
     commandRegistry = commands,
     http,
     persistence,
@@ -24,6 +27,8 @@ export async function startBot({
     persistence?: Persistence;
     env?: Environment;
     createGateway?: GatewayFactory;
+    createCommandDatabase?: (config: DatabaseConfig) => ModerationDatabase;
+    schedule?: ModerationSchedule;
     commandRegistry?: readonly Command[];
     reportError?: (error: unknown) => void;
     reportReady?: () => void;
@@ -45,8 +50,34 @@ export async function startBot({
     });
     let ownedDatabase: ReturnType<typeof createDatabase> | undefined;
     const getOwnedDatabase = (): ReturnType<typeof createDatabase> => ownedDatabase ??= createDatabase(config);
+    let moderationDatabase: ModerationDatabase | undefined;
+    const getModerationDatabase = (): ModerationDatabase => {
+        moderationDatabase ??= createCommandDatabase ? createCommandDatabase(config) : getOwnedDatabase();
+        return moderationDatabase;
+    };
+    const destroyGateway = gateway.destroy.bind(gateway);
+    gateway.destroy = async () => {
+        try {
+            await destroyGateway();
+        } finally {
+            const activeDatabase = ownedDatabase;
+            const activeModerationDatabase = moderationDatabase;
+            ownedDatabase = undefined;
+            moderationDatabase = undefined;
+            try {
+                await activeDatabase?.$disconnect();
+            } finally {
+                if (activeModerationDatabase !== activeDatabase) await activeModerationDatabase?.$disconnect?.();
+            }
+        }
+    };
+    const context = {
+        database: getModerationDatabase, reportError,
+        ...(gateway.getModerationMember ? { getModerationMember: gateway.getModerationMember } : {}),
+        ...(schedule ? { schedule } : {}),
+    };
     for (const event of createEvents({
-        commandRegistry, reportReady, reportError, http, weatherApi: config.weatherApi,
+        commandRegistry, reportReady, reportError, context, http, weatherApi: config.weatherApi,
         getDatabase: () => database ?? getOwnedDatabase(),
         persistence: persistence ?? createPersistence(getOwnedDatabase),
         sendLog: gateway.sendLog, getGuildInformation: gateway.getGuildInformation,

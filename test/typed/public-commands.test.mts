@@ -227,7 +227,7 @@ await test('help displays shared registry names in category order regardless of 
     }] }] });
 });
 
-await test('help remains a valid Discord reply while migration categories are empty', async () => {
+await test('help returns a valid Discord reply with every migrated category populated', async () => {
     const gateway = new OfflineGateway();
     await startBot({ env: startupEnvironment, createGateway: () => gateway });
     const interaction = new OfflineInteraction();
@@ -236,7 +236,6 @@ await test('help remains a valid Discord reply while migration categories are em
     const embed = replyEmbed(interaction);
     assert.ok(embed.fields?.every(field => field.value.length > 0));
     assert.deepEqual(embed.fields?.filter(field => field.value === '\u200b').map(field => field.name), [
-        '🛡️ Moderation',
     ]);
 });
 

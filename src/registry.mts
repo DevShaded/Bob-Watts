@@ -19,6 +19,16 @@ import { slap } from './commands/slap.mjs';
 import { rps } from './commands/rps.mjs';
 import { help } from './commands/help.mjs';
 import { botinfo } from './commands/botinfo.mjs';
+import { kick } from './commands/kick.mjs';
+import { unban } from './commands/unban.mjs';
+import { warn } from './commands/warn.mjs';
+import { mute } from './commands/mute.mjs';
+import { unmute } from './commands/unmute.mjs';
+import { vckick } from './commands/vckick.mjs';
+import { clean } from './commands/clean.mjs';
+import { infractions } from './commands/infractions.mjs';
+import { clearinfractions } from './commands/clearinfractions.mjs';
+import { ban } from './commands/ban.mjs';
 import { userinfo } from './commands/userinfo.mjs';
 import { randomdog } from './commands/randomdog.mjs';
 import { weather } from './commands/weather.mjs';
@@ -28,11 +38,12 @@ import { randomcat } from './commands/randomcat.mjs';
 export const commands: readonly Command[] = [
     eightBall, coinflip, cookie, diceroll, hug, kiss, rps, slap,
     botinfo, help, ping, userinfo, serverinfo,
+    ban, clean, clearinfractions, infractions, kick, mute, unban, unmute, vckick, warn,
     randomcat, randomdog, weather,
     setSettings, removeSettings, addModerator, deleteModerator,
 ];
 
-export function createEvents({ commandRegistry, reportReady, reportError, http, weatherApi, persistence, sendLog, logGuildId, logChannelId, getGuildInformation, getDatabase }: {
+export function createEvents({ commandRegistry, reportReady, reportError, http, weatherApi, persistence, sendLog, logGuildId, logChannelId, getGuildInformation, getDatabase, context = {} }: {
     persistence: Persistence;
     getGuildInformation?: GetGuildInformation | undefined;
     sendLog?: SendLog | undefined;
@@ -42,6 +53,7 @@ export function createEvents({ commandRegistry, reportReady, reportError, http, 
     http?: HttpTransport | undefined;
     weatherApi?: string | undefined;
     commandRegistry: readonly Command[];
+    context?: Omit<CommandContext, 'commands'>;
     reportReady: () => void;
     reportError: (error: unknown) => void;
 }): readonly RegisteredEvent[] {
@@ -75,7 +87,7 @@ export function createEvents({ commandRegistry, reportReady, reportError, http, 
 
             try {
                 await command.execute(interaction, {
-                    commands: commandRegistry, persistence, getGuildInformation,
+                    ...context, commands: commandRegistry, persistence, getGuildInformation,
                     ...(getDatabase ? { getDatabase } : {}),
                     ...(http ? { http } : {}), weatherApi,
                 });

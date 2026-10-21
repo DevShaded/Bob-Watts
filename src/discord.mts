@@ -9,6 +9,10 @@ export function createDiscordGateway(options: ClientOptions): Gateway {
         else client.on(name, listener);
     }
     return {
+        async getModerationMember(guildId, userId) {
+            const guild = client.guilds.cache.get(guildId);
+            return guild ? guild.members.fetch(userId) : null;
+        },
         async getGuildInformation(guildId) {
             const guild = client.guilds.cache.get(guildId);
             if (!guild?.available) return null;
