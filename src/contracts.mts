@@ -58,10 +58,18 @@ export interface CommandMetadata {
     readonly data: { toJSON(): RESTPostAPIChatInputApplicationCommandsJSONBody };
 }
 
+export interface HttpTransport {
+    get(url: string): Promise<unknown>;
+}
+
+export interface CommandContext {
+    readonly commands: readonly CommandMetadata[];
+    readonly http?: HttpTransport;
+    readonly weatherApi?: string | undefined;
+}
+
 export interface Command extends CommandMetadata {
-    execute(interaction: CommandInteraction, context: {
-        readonly commands: readonly CommandMetadata[];
-    }): Promise<void>;
+    execute(interaction: CommandInteraction, context: CommandContext): Promise<void>;
 }
 
 // Event names match Discord. Non-chat-input interactions carry no command.

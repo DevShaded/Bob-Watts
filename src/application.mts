@@ -1,7 +1,7 @@
 import { GatewayIntentBits, Partials, REST, Routes } from 'discord.js';
 import { readRegistrationConfig, readStartupConfig } from './configuration.mjs';
 import type { Environment } from './configuration.mjs';
-import type { Command, Gateway, GatewayFactory, RestFactory } from './contracts.mjs';
+import type { Command, HttpTransport, Gateway, GatewayFactory, RestFactory } from './contracts.mjs';
 import { createDiscordGateway } from './discord.mjs';
 import { commands, createEvents } from './registry.mjs';
 
@@ -9,9 +9,11 @@ export async function startBot({
     env = process.env,
     createGateway = createDiscordGateway,
     commandRegistry = commands,
+    http,
     reportError = console.error,
     reportReady = () => { console.log('Bot has successfully signed in and is listening to events'); },
 }: {
+    http?: HttpTransport;
     env?: Environment;
     createGateway?: GatewayFactory;
     commandRegistry?: readonly Command[];
@@ -33,7 +35,7 @@ export async function startBot({
         partials: [Partials.Message, Partials.Channel, Partials.Reaction],
         allowedMentions: { parse: ['users', 'roles'], repliedUser: true },
     });
-    for (const event of createEvents({ commandRegistry, reportReady, reportError })) {
+    for (const event of createEvents({ commandRegistry, reportReady, reportError, http, weatherApi: config.weatherApi })) {
         gateway.subscribe(event, reportError);
     }
     try {
