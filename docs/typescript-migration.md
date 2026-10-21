@@ -79,6 +79,9 @@ Command context exposes a narrow moderation database provider, member resolver, 
 
 Behavior corrections covered through dispatch:
 
+- Soft moderators (stored level 3) retain infraction listing access without Discord Manage Messages permission. Infraction clearing still requires stored level 1 or Discord Administrator permission.
+- Moderation policies explicitly select actions; only the ban action can invoke a ban. Shared authorization, persistence, and replies remain in place.
+
 - Stored moderators can unban by string account ID without resolving a guild member. Unknown-ban responses remain controlled.
 - Ban and kick reject every ineligible member; the legacy guard incorrectly required that member to also be the bot.
 - Missing mute settings, missing or non-message log channels, and disconnected voice members no longer cause unchecked resource access.
@@ -101,7 +104,7 @@ Guild, settings, user, member, channel, thread, message, and message-association
 
 Behavior corrections covered through startup event delivery or command dispatch:
 
-- Missing welcome logging no longer prevents the configured join role from being applied.
+- The configured join role is checked against the guild role cache, so new members receive it even when they do not already hold it. Missing or failed welcome logging does not prevent role assignment; absent or deleted roles are skipped.
 - Thread messages create the channel row required by their message relationship; thread owners are persisted before their thread relationship. Archived dates become valid stored strings, and nullable member join dates remain null.
 - Uncached message members and partial member removals no longer require unavailable member/user properties.
 - `/serverinfo` handles absent guilds and settings with a private unavailable response, reloads initialized settings, supplies emoji fallbacks, and produces a valid role field when only the everyone role exists.

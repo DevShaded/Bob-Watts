@@ -15,16 +15,9 @@ export async function executeModeration(interaction: CommandInteraction, context
     if (!context.database) throw new Error('Moderation dependencies unavailable');
     const executor = await guild.members.fetch(interaction.user.id);
     const database = context.database();
-    const clear = interaction.commandName === 'clearinfractions';
-    const list = interaction.commandName === 'infractions';
-    const clean = interaction.commandName === 'clean';
-    const voiceKick = interaction.commandName === 'vckick';
-    const unmute = interaction.commandName === 'unmute';
-    const mute = interaction.commandName === 'mute';
-    const warn = interaction.commandName === 'warn';
-    const kick = interaction.commandName === 'kick';
     const policy = moderationPolicies.get(interaction.commandName);
     if (!policy) throw new Error(`Unknown moderation command: ${interaction.commandName}`);
+    const action = policy.action;
     if (!executor || (!executor.permissions.has(policy.permission)
         && !await verifyModeratorLevel(database.moderators, { guildId: guild.id, accountId: interaction.user.id }, policy.level))) {
         await respond(interaction, {
@@ -33,7 +26,7 @@ export async function executeModeration(interaction: CommandInteraction, context
         });
         return;
     }
-    if (interaction.commandName === 'unban') {
+    if (action === 'unban') {
         const id = interaction.options.getString('target');
         const user = id ? await database.users.findUnique({ where: { accountId: id } }) : null;
         if (!user) {
@@ -76,9 +69,9 @@ export async function executeModeration(interaction: CommandInteraction, context
         await respond(interaction, { content: "Sorry! I can't find this user!", flags: MessageFlags.Ephemeral });
         return;
     }
-    if ((interaction.commandName === 'ban' && (!target.bannable || target.id === interaction.client.user?.id))
-        || (kick && (!target.kickable || target.id === interaction.client.user?.id))) {
-        await respond(interaction, { embeds: [errorEmbed(interaction, kick ? 'This user is not kickable!' : 'This user is not bannable!')], flags: MessageFlags.Ephemeral });
+    if ((action === 'ban' && (!target.bannable || target.id === interaction.client.user?.id))
+        || (action === 'kick' && (!target.kickable || target.id === interaction.client.user?.id))) {
+        await respond(interaction, { embeds: [errorEmbed(interaction, action === 'kick' ? 'This user is not kickable!' : 'This user is not bannable!')], flags: MessageFlags.Ephemeral });
         return;
     }
     const selfDenial = policy.selfDenial;
@@ -86,7 +79,7 @@ export async function executeModeration(interaction: CommandInteraction, context
         await respond(interaction, { embeds: [errorEmbed(interaction, selfDenial)], flags: MessageFlags.Ephemeral });
         return;
     }
-    if (list) {
+    if (action === 'list') {
         const records = await database.infractions.findMany({ where: { guildId: guild.id, accountId: target.id } });
         const author = { name: target.user.tag, icon_url: target.user.displayAvatarURL() };
         if (!records.length) {
@@ -113,7 +106,7 @@ export async function executeModeration(interaction: CommandInteraction, context
     }
     const reason = interaction.options.getString('reason') || 'No reason provided';
     const days = interaction.options.getInteger?.('days') ?? 0;
-    if ((mute || interaction.commandName === 'ban') && (!Number.isSafeInteger(days) || days < 0 || !Number.isSafeInteger(days * 86400000) || (interaction.commandName === 'ban' && days > 7))) {
+    if ((action === 'mute' || action === 'ban') && (!Number.isSafeInteger(days) || days < 0 || !Number.isSafeInteger(days * 86400000) || (action === 'ban' && days > 7))) {
         await respond(interaction, { content: 'Please provide a valid number of days.', flags: MessageFlags.Ephemeral });
         return;
     }
@@ -125,7 +118,7 @@ export async function executeModeration(interaction: CommandInteraction, context
             createdTimestamp: moment(user.createdTimestamp).format('YYYY-MM-DD HH-mm-ss'),
         } });
     }
-    if (clear) {
+    if (action === 'clear') {
         const amount = Math.max(1, interaction.options.getInteger?.('amount') ?? 1);
         const records = await database.infractions.findMany({ where: { guildId: guild.id, accountId: target.id }, orderBy: [{ id: 'desc' }], take: amount });
         if (!records.length) {
@@ -145,7 +138,7 @@ export async function executeModeration(interaction: CommandInteraction, context
         }
         return;
     }
-    if (clean) {
+    if (action === 'clean') {
         const channel = interaction.channel;
         if (!channel?.messages || !interaction.deferReply) {
             await respond(interaction, { content: 'Cannot clean messages in this channel!', flags: MessageFlags.Ephemeral });
@@ -183,25 +176,25 @@ export async function executeModeration(interaction: CommandInteraction, context
         return;
     }
     const voiceId = target.voice.channel?.id;
-    if (voiceKick && !voiceId) {
+    if (action === 'voiceKick' && !voiceId) {
         await respond(interaction, { embeds: [errorEmbed(interaction, `<@${target.id}> is not in a voice channel!`)], flags: MessageFlags.Ephemeral });
         return;
     }
-    if (voiceKick) {
+    if (action === 'voiceKick') {
         await target.voice.disconnect(reason);
-    } else if (mute || unmute) {
+    } else if (action === 'mute' || action === 'unmute') {
         const role = settings?.mute_role;
         if (!role) {
             await respond(interaction, { embeds: [errorEmbed(interaction, 'This server has not setup a mute role. Set one up with `/set muterole`')], flags: MessageFlags.Ephemeral });
             return;
         }
-        if (mute ? target.roles.cache.has(role) : !target.roles.cache.has(role)) {
-            await respond(interaction, { content: mute ? 'It looks like this user is already muted!' : 'It looks like this user is not muted!', flags: MessageFlags.Ephemeral });
+        if (action === 'mute' ? target.roles.cache.has(role) : !target.roles.cache.has(role)) {
+            await respond(interaction, { content: action === 'mute' ? 'It looks like this user is already muted!' : 'It looks like this user is not muted!', flags: MessageFlags.Ephemeral });
             return;
         }
-        if (unmute) await target.roles.remove(role);
+        if (action === 'unmute') await target.roles.remove(role);
         else await target.roles.add(role);
-        if (mute && days > 0) {
+        if (action === 'mute' && days > 0) {
             const schedule = context.schedule ?? scheduleModeration;
             schedule(days * 86400000, async () => {
                 try {
@@ -210,19 +203,19 @@ export async function executeModeration(interaction: CommandInteraction, context
                 } catch (error) { context.reportError?.(error); }
             });
         }
-    } else if (kick) await target.kick(reason);
-    else if (!warn) await target.ban({ reason, deleteMessageSeconds: days * 86400 });
-    await database.infractions.create({ data: { guildId: guild.id, accountId: target.id, reason, type: warn ? 'warning' : interaction.commandName, expires: mute && days > 0 ? `${String(days)} day(s)` : null } });
-    const description = voiceKick ? `This user has been kicked from <#${voiceId ?? ''}>` : `This user has been ${policy.verb}!`;
+    } else if (action === 'kick') await target.kick(reason);
+    else if (action === 'ban') await target.ban({ reason, deleteMessageSeconds: days * 86400 });
+    await database.infractions.create({ data: { guildId: guild.id, accountId: target.id, reason, type: action === 'warn' ? 'warning' : interaction.commandName, expires: action === 'mute' && days > 0 ? `${String(days)} day(s)` : null } });
+    const description = action === 'voiceKick' ? `This user has been kicked from <#${voiceId ?? ''}>` : `This user has been ${policy.verb}!`;
     const details = actionDetails(interaction, target, description, reason, logId ? policy.label : undefined);
     if (log?.send) await log.send({ embeds: [details] });
     await respond(interaction, {
-        embeds: [logId ? { ...embed(interaction, `That user has been ${voiceKick ? 'kicked from the voice channel' : policy.verb}!`), author: { name: user.tag, icon_url: target.displayAvatarURL({ forceStatic: false }) } } : details],
-        ...(logId && !(mute && days > 0) ? { flags: MessageFlags.Ephemeral } : {}),
+        embeds: [logId ? { ...embed(interaction, `That user has been ${action === 'voiceKick' ? 'kicked from the voice channel' : policy.verb}!`), author: { name: user.tag, icon_url: target.displayAvatarURL({ forceStatic: false }) } } : details],
+        ...(logId && !(action === 'mute' && days > 0) ? { flags: MessageFlags.Ephemeral } : {}),
     });
-    if (mute || unmute || (logId && (warn || voiceKick))) {
-        const action = voiceKick ? 'kicked from the voice channel' : unmute ? 'unmuted' : mute ? 'muted' : 'warned';
-        await notify(interaction, context, target, `You have been ${action} in **${guild.name}** for the following reason(s): \n\n${reason}`);
+    if (action === 'mute' || action === 'unmute' || (logId && (action === 'warn' || action === 'voiceKick'))) {
+        const notificationAction = action === 'voiceKick' ? 'kicked from the voice channel' : action === 'unmute' ? 'unmuted' : action === 'mute' ? 'muted' : 'warned';
+        await notify(interaction, context, target, `You have been ${notificationAction} in **${guild.name}** for the following reason(s): \n\n${reason}`);
     }
 }
 
@@ -257,7 +250,10 @@ async function notify(interaction: CommandInteraction, context: CommandContext, 
     } catch (error) { context.reportError?.(error); }
 }
 
+type ModerationAction = 'ban' | 'unban' | 'kick' | 'clean' | 'clear' | 'list' | 'mute' | 'unmute' | 'warn' | 'voiceKick';
+
 interface ModerationPolicy {
+    readonly action: ModerationAction;
     readonly permission: bigint;
     readonly permissionName: string;
     readonly level: ModeratorLevel;
@@ -269,16 +265,16 @@ interface ModerationPolicy {
 const manageMessages = { permission: PermissionFlagsBits.ManageMessages, permissionName: 'MANAGE_MESSAGES', level: 2 } satisfies Pick<ModerationPolicy, 'permission' | 'permissionName' | 'level'>;
 const banMembers = { permission: PermissionFlagsBits.BanMembers, permissionName: 'BAN_MEMBERS', level: 2 } satisfies Pick<ModerationPolicy, 'permission' | 'permissionName' | 'level'>;
 const moderationPolicies = new Map<string, ModerationPolicy>([
-    ['ban', { ...banMembers, label: 'Ban', verb: 'banned' }],
-    ['unban', { ...banMembers, label: 'Unban', verb: 'unbanned' }],
-    ['kick', { permission: PermissionFlagsBits.KickMembers, permissionName: 'KICK_MEMBERS', level: 2, label: 'Kick', verb: 'kicked' }],
-    ['clean', { ...manageMessages, label: 'Clean', verb: 'cleaned', selfDenial: 'Cannot clear messages from this user!' }],
-    ['clearinfractions', { permission: PermissionFlagsBits.Administrator, permissionName: 'ADMINISTRATOR', level: 1, label: 'Clear Infractions', verb: 'cleared', selfDenial: 'Cannot clear infractions from this user!' }],
-    ['infractions', { ...manageMessages, label: 'Infractions', verb: 'listed', selfDenial: 'Cannot get infractions from this user!' }],
-    ['mute', { ...manageMessages, label: 'Mute', verb: 'muted', selfDenial: 'This user is not mutable!' }],
-    ['unmute', { ...manageMessages, label: 'Unmute', verb: 'unmuted' }],
-    ['warn', { ...manageMessages, level: 3, label: 'Warning', verb: 'warned' }],
-    ['vckick', { permission: PermissionFlagsBits.MoveMembers, permissionName: 'MOVE_MEMBERS', level: 2, label: 'Voice channel kick', verb: 'kicked' }],
+    ['ban', { action: 'ban', ...banMembers, label: 'Ban', verb: 'banned' }],
+    ['unban', { action: 'unban', ...banMembers, label: 'Unban', verb: 'unbanned' }],
+    ['kick', { action: 'kick', permission: PermissionFlagsBits.KickMembers, permissionName: 'KICK_MEMBERS', level: 2, label: 'Kick', verb: 'kicked' }],
+    ['clean', { action: 'clean', ...manageMessages, label: 'Clean', verb: 'cleaned', selfDenial: 'Cannot clear messages from this user!' }],
+    ['clearinfractions', { action: 'clear', permission: PermissionFlagsBits.Administrator, permissionName: 'ADMINISTRATOR', level: 1, label: 'Clear Infractions', verb: 'cleared', selfDenial: 'Cannot clear infractions from this user!' }],
+    ['infractions', { action: 'list', ...manageMessages, level: 3, label: 'Infractions', verb: 'listed', selfDenial: 'Cannot get infractions from this user!' }],
+    ['mute', { action: 'mute', ...manageMessages, label: 'Mute', verb: 'muted', selfDenial: 'This user is not mutable!' }],
+    ['unmute', { action: 'unmute', ...manageMessages, label: 'Unmute', verb: 'unmuted' }],
+    ['warn', { action: 'warn', ...manageMessages, level: 3, label: 'Warning', verb: 'warned' }],
+    ['vckick', { action: 'voiceKick', permission: PermissionFlagsBits.MoveMembers, permissionName: 'MOVE_MEMBERS', level: 2, label: 'Voice channel kick', verb: 'kicked' }],
 ]);
 
 function actionDetails(interaction: CommandInteraction, target: ModerationMember, description: string, reason: string, action?: string): APIEmbed {

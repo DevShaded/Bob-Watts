@@ -61,9 +61,42 @@ await test('member arrival persists state and applies join role without a welcom
     const roles: string[] = [];
     const arrival = gateway.events.find(event => event.name === 'guildMemberAdd');
     assert.ok(arrival);
-    await arrival.execute({ ...member, roles: { cache: new Map([['role', { id: 'role' }]]), add: role => { roles.push(role); return Promise.resolve(); } } });
+    const guild = { ...member.guild, roles: { cache: new Map([['role', { id: 'role' }]]) } };
+    await arrival.execute({ ...member, guild, roles: { cache: new Map(), add: role => { roles.push(role); return Promise.resolve(); } } });
     assert.partialDeepStrictEqual(writes, [{ user: { accountId: 'user', username: 'Alice' } }, { member: { accountId: 'user', guildId: 'guild', joinedTimestamp: null } }]);
     assert.deepEqual(roles, ['role']);
+});
+
+await test('member arrival validates guild join roles independently of welcome logging', async () => {
+    for (const joinRole of [null, 'deleted', 'role']) {
+        for (const welcome of ['missing', 'sent', 'failed']) {
+            const gateway = new OfflineGateway();
+            const failure = new Error('Welcome unavailable');
+            const errors: unknown[] = [];
+            gateway.sendLog = () => welcome === 'failed' ? Promise.reject(failure) : Promise.resolve();
+            await startBot({ env: startupEnvironment, createGateway: () => gateway,
+                reportError: error => { errors.push(error); }, persistence: {
+                    ...offlinePersistence(),
+                    guildLogs: () => Promise.resolve({
+                        id: 1, guildId: 'guild', delete_log: null, edit_log: null, goodbye_log: null,
+                        goodbye_message: null, infractions_log: null, join_role: joinRole, mute_role: null,
+                        welcome_log: welcome === 'missing' ? null : 'welcome', welcome_message: null,
+                        createdAt: new Date(), updatedAt: new Date(),
+                    }),
+                },
+            });
+            const member = memberState();
+            const roles: string[] = [];
+            const arrival = gateway.events.find(event => event.name === 'guildMemberAdd');
+            assert.ok(arrival);
+            await arrival.execute({ ...member,
+                guild: { ...member.guild, roles: { cache: new Map([['role', { id: 'role' }]]) } },
+                roles: { cache: new Map(), add: role => { roles.push(role); return Promise.resolve(); } },
+            });
+            assert.deepEqual(roles, joinRole === 'role' ? ['role'] : [], `${String(joinRole)}: ${welcome}`);
+            assert.deepEqual(errors, welcome === 'failed' ? [failure] : []);
+        }
+    }
 });
 
 await test('member departure updates counts even for partial members and sends configured goodbye', async () => {
