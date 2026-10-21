@@ -7,6 +7,9 @@ export type StoredGuild = Pick<Guilds, 'guildId' | 'prefix' | 'memberCount' | 'p
 };
 
 // Capabilities describe database operations, never an incomplete Prisma client.
+export type EventGuildLogs = Pick<GuildLogs, 'welcome_log' | 'welcome_message' | 'goodbye_log' | 'goodbye_message' | 'join_role'>;
+export type StoredActivity = Pick<Bot, 'name' | 'type' | 'url'>;
+
 export interface Persistence {
     saveGuild(guild: Prisma.GuildsUncheckedCreateInput, settings: Prisma.GuildSettingsUncheckedCreateInput): Promise<void>;
     unavailableGuild(guildId: string): Promise<void>;
@@ -17,9 +20,9 @@ export interface Persistence {
     saveGuildChannel(channel: Prisma.GuildChannelsUncheckedCreateInput): Promise<void>;
     saveThread(channel: Prisma.ThreadChannelsUncheckedCreateInput): Promise<void>;
     saveMessage(message: Prisma.MessagesUncheckedCreateInput, channelName: string): Promise<void>;
-    guildLogs(guildId: string): Promise<GuildLogs | null>;
+    guildLogs(guildId: string): Promise<EventGuildLogs | null>;
     guild(guildId: string): Promise<StoredGuild | null>;
-    activity(): Promise<Bot | null>;
+    activity(): Promise<StoredActivity | null>;
 }
 
 export function createPersistence(source: DatabaseConfig | (() => PrismaClient)): Persistence {
@@ -53,16 +56,19 @@ export function createPersistence(source: DatabaseConfig | (() => PrismaClient))
             await db().threadChannels.upsert({ where: { threadId: channel.threadId }, create: channel, update: channel });
         },
         async saveMessage(message, channelName) {
-            // Duplicate delivery must not duplicate the two message associations.
-            await db().messages.upsert({
-                where: { messageId: message.messageId }, update: {},
-                create: {
-                    ...message,
-                    ChannelMessages: { create: { channelId: message.channelId, channelName } },
-                },
+            // Preserve one pair of associations per new message; duplicate delivery
+            // must not create associations without a corresponding new message.
+            await db().$transaction(async transaction => {
+                const existing = await transaction.messages.findUnique({ where: { messageId: message.messageId } });
+                if (existing) return;
+                await transaction.messages.create({
+                    data: {
+                        ...message,
+                        ChannelMessages: { create: { channelId: message.channelId, channelName } },
+                    },
+                });
+                await transaction.userChannels.create({ data: { accountId: message.accountId, channelId: message.channelId } });
             });
-            const association = await db().userChannels.findFirst({ where: { accountId: message.accountId, channelId: message.channelId } });
-            if (!association) await db().userChannels.create({ data: { accountId: message.accountId, channelId: message.channelId } });
         },
         guildLogs: guildId => db().guildLogs.findUnique({ where: { guildId } }),
         guild: guildId => db().guilds.findUnique({ where: { guildId }, include: { GuildSettings: true } }),

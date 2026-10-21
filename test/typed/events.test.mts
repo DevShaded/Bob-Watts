@@ -148,10 +148,10 @@ await test('thread messages create their required channel row and preserve histo
     } });
     const delivery = gateway.events.find(event => event.name === 'messageCreate');
     assert.ok(delivery);
-    await delivery.execute({ ...messageState(), channel: { ...threadState(), ownerId: 'user' } });
+    await delivery.execute({ ...messageState(), channel: { ...threadState(), ownerId: 'user', archivedAt: new Date('2022-01-01T00:00:00Z'), archiveTimestamp: Date.UTC(2022, 0, 1) } });
     assert.partialDeepStrictEqual(writes, [
         { channel: { channelId: 'thread', type: 'GUILD_PUBLIC_THREAD' } },
-        { thread: { threadId: 'thread', ownerId: 'user', type: 'GUILD_PUBLIC_THREAD', archivedAt: null, archivedTimestamp: null } },
+        { thread: { threadId: 'thread', ownerId: 'user', type: 'GUILD_PUBLIC_THREAD', archivedAt: '2022-01-01T00:00:00.000Z' } },
         { message: { channelId: 'thread', messageId: 'message' } },
     ]);
 });
@@ -210,4 +210,27 @@ await test('member updates persist users and null dates while unavailable guild 
     await update.execute(member, { ...member, guild: { ...member.guild, available: false } });
     await create.execute({ ...guildState(), available: false });
     assert.partialDeepStrictEqual(writes, [{ nickname: 'New name', joinedTimestamp: null, premiumSinceTimestamp: null }]);
+});
+
+await test('thread delivery resolves a distinct owner and persists the referenced account', async () => {
+    const gateway = new OfflineGateway();
+    const accounts: string[] = [];
+    const threadOwners: string[] = [];
+    await startBot({ env: startupEnvironment, createGateway: () => gateway, persistence: {
+        ...offlinePersistence(),
+        saveUser: user => { accounts.push(user.accountId); return Promise.resolve(); },
+        saveThread: thread => {
+            assert.ok(accounts.includes(thread.ownerId));
+            threadOwners.push(thread.ownerId);
+            return Promise.resolve();
+        },
+    } });
+    const delivery = gateway.events.find(event => event.name === 'messageCreate');
+    assert.ok(delivery);
+    const message = messageState();
+    await delivery.execute({
+        ...message, channel: threadState(),
+        fetchUser: id => Promise.resolve({ ...message.author, id, username: 'Owner' }),
+    });
+    assert.deepEqual(threadOwners, ['owner']);
 });
