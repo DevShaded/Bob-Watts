@@ -2,8 +2,12 @@ import { serverinfo } from './commands/serverinfo.mjs';
 import { createResourceEvents } from './events.mjs';
 import type { SendLog, GetGuildInformation } from './event-resources.mjs';
 import type { Persistence } from './persistence.mjs';
+import { setSettings } from './commands/set.mjs';
+import { removeSettings } from './commands/remove.mjs';
+import { addModerator } from './commands/add.mjs';
+import { deleteModerator } from './commands/delete.mjs';
 import { ActivityType, MessageFlags } from 'discord.js';
-import type { Command, HttpTransport, RegisteredEvent } from './contracts.mjs';
+import type { Command, CommandContext, HttpTransport, RegisteredEvent } from './contracts.mjs';
 import { ping } from './commands/ping.mjs';
 import { coinflip } from './commands/coinflip.mjs';
 import { eightBall } from './commands/8ball.mjs';
@@ -25,14 +29,16 @@ export const commands: readonly Command[] = [
     eightBall, coinflip, cookie, diceroll, hug, kiss, rps, slap,
     botinfo, help, ping, userinfo, serverinfo,
     randomcat, randomdog, weather,
+    setSettings, removeSettings, addModerator, deleteModerator,
 ];
 
-export function createEvents({ commandRegistry, reportReady, reportError, http, weatherApi, persistence, sendLog, logGuildId, logChannelId, getGuildInformation }: {
+export function createEvents({ commandRegistry, reportReady, reportError, http, weatherApi, persistence, sendLog, logGuildId, logChannelId, getGuildInformation, getDatabase }: {
     persistence: Persistence;
     getGuildInformation?: GetGuildInformation | undefined;
     sendLog?: SendLog | undefined;
     logGuildId?: string | undefined;
     logChannelId?: string | undefined;
+    getDatabase?: CommandContext['getDatabase'];
     http?: HttpTransport | undefined;
     weatherApi?: string | undefined;
     commandRegistry: readonly Command[];
@@ -68,7 +74,11 @@ export function createEvents({ commandRegistry, reportReady, reportError, http, 
             if (!command) return;
 
             try {
-                await command.execute(interaction, { commands: commandRegistry, persistence, getGuildInformation, ...(http ? { http } : {}), weatherApi });
+                await command.execute(interaction, {
+                    commands: commandRegistry, persistence, getGuildInformation,
+                    ...(getDatabase ? { getDatabase } : {}),
+                    ...(http ? { http } : {}), weatherApi,
+                });
             } catch (error) {
                 reportError(error);
                 const response = { content: 'Well that didn\'t work, try another command maybe?' };

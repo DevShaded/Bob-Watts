@@ -1,7 +1,7 @@
 export type ModeratorLevel = 1 | 2 | 3;
 
 export interface ModeratorStore {
-    findFirst(query: { where: { guildId: string; accountId: string } }): Promise<{ level: number } | null>;
+    findFirst(query: { where: { guildId: string; accountId: string; level?: number } }): Promise<{ level: number } | null>;
 }
 
 export async function verifyModeratorLevel(

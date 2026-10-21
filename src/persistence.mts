@@ -22,10 +22,10 @@ export interface Persistence {
     activity(): Promise<Bot | null>;
 }
 
-export function createPersistence(config: DatabaseConfig): Persistence {
+export function createPersistence(source: DatabaseConfig | (() => PrismaClient)): Persistence {
     // Delay pool creation until an operation actually needs it.
     let database: PrismaClient | undefined;
-    function db(): PrismaClient { database ??= createDatabase(config); return database; }
+    function db(): PrismaClient { database ??= typeof source === 'function' ? source() : createDatabase(source); return database; }
     return {
         async saveGuild(guild, settings) {
             await db().guilds.upsert({ where: { guildId: guild.guildId }, create: guild, update: guild });

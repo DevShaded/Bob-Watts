@@ -53,3 +53,20 @@ Behavior corrections covered by dispatch regressions:
 - Kelvin forecasts display wind speed in `m/s`; the legacy `K/m` label was not a speed unit.
 
 Valid embeds, image link buttons, weather rounding, slash definitions, and help visibility remain compatible. Offline tests enter through startup/dispatch or registration using the shared registry.
+
+## Settings commands checkpoint (#31)
+
+The typed registry includes `set`, `remove`, `add`, and `delete`, with serialized definitions checked against their legacy counterparts. Legacy `Commands` and `App` implementations remain until #34.
+
+Settings use the shared moderator-level verifier: Discord administrators and stored level 1 administrators can manage settings and moderator levels. Existing level values, targeted deletion, private responses, target DMs, guild/user initialization, nested guild settings, timestamp formats, and historical enum strings remain compatible.
+
+`startBot` accepts a narrow `SettingsDatabase` substitute. Command context exposes `getDatabase()`; production creates and shares its Prisma client only when a command needs persistence. Discord contracts include only the guild metadata, member permissions, user DM capabilities, and option lookups consumed by these commands.
+
+Behavior corrections covered through dispatch:
+
+- Missing settings resources receive private responses. Channels without message support cannot be stored as log destinations.
+- Updating an infraction channel reports setup success after a successful write; the legacy update branch incorrectly used a failure title.
+- Removing an unconfigured auto role identifies the auto role; the legacy response incorrectly named the mute role.
+- Discord reply failures after successful settings writes reach application error handling instead of being caught and reported as database failures. Database write failures retain their operation-specific private responses.
+
+Offline tests cover authorization across all four commands, every setting's creation/update/removal fields, missing configuration, moderator level replacement and exact-level deletion, blocked DMs, initialization relationships and stored enum values, and guild/global registration payloads.

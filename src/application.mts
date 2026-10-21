@@ -1,5 +1,7 @@
 import { createPersistence } from './persistence.mjs';
 import type { Persistence } from './persistence.mjs';
+import { createDatabase } from './database.mjs';
+import type { SettingsDatabase } from './settings-database.mjs';
 import { GatewayIntentBits, Partials, REST, Routes } from 'discord.js';
 import { readRegistrationConfig, readStartupConfig } from './configuration.mjs';
 import type { Environment } from './configuration.mjs';
@@ -8,6 +10,7 @@ import { createDiscordGateway } from './discord.mjs';
 import { commands, createEvents } from './registry.mjs';
 
 export async function startBot({
+    database,
     env = process.env,
     createGateway = createDiscordGateway,
     commandRegistry = commands,
@@ -16,6 +19,7 @@ export async function startBot({
     reportError = console.error,
     reportReady = () => { console.log('Bot has successfully signed in and is listening to events'); },
 }: {
+    database?: SettingsDatabase;
     http?: HttpTransport;
     persistence?: Persistence;
     env?: Environment;
@@ -39,7 +43,15 @@ export async function startBot({
         partials: [Partials.Message, Partials.Channel, Partials.Reaction],
         allowedMentions: { parse: ['users', 'roles'], repliedUser: true },
     });
-    for (const event of createEvents({ commandRegistry, reportReady, reportError, http, weatherApi: config.weatherApi, persistence: persistence ?? createPersistence(config), sendLog: gateway.sendLog, getGuildInformation: gateway.getGuildInformation, logGuildId: config.guildId, logChannelId: config.channelId })) {
+    let ownedDatabase: ReturnType<typeof createDatabase> | undefined;
+    const getOwnedDatabase = (): ReturnType<typeof createDatabase> => ownedDatabase ??= createDatabase(config);
+    for (const event of createEvents({
+        commandRegistry, reportReady, reportError, http, weatherApi: config.weatherApi,
+        getDatabase: () => database ?? getOwnedDatabase(),
+        persistence: persistence ?? createPersistence(getOwnedDatabase),
+        sendLog: gateway.sendLog, getGuildInformation: gateway.getGuildInformation,
+        logGuildId: config.guildId, logChannelId: config.channelId,
+    })) {
         gateway.subscribe(event, reportError);
     }
     try {
