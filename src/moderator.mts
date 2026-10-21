@@ -1,9 +1,7 @@
-import moment from 'moment';
 import { MessageFlags } from 'discord.js';
 import type { CommandContext, CommandInteraction, CommandGuild, CommandUser } from './contracts.mjs';
-import type { SettingsDatabase } from './settings-database.mjs';
 import { authorizeSettings } from './settings.mjs';
-import { databaseEnums } from './database-enums.mjs';
+import { serializeGuild, serializeGuildSettings, serializeUser } from './resource-serialization.mjs';
 
 interface ModeratorDefinition {
     missing: (target: CommandUser) => string;
@@ -46,18 +44,9 @@ const definitions: ReadonlyMap<string, ModeratorDefinition> = new Map([
 ]);
 
 export async function addModerator(interaction: CommandInteraction, context: CommandContext): Promise<void> {
-    const authorized = await authorizeSettings(interaction, context);
-    if (!authorized) return;
-    const target = interaction.options.getUser('target');
-    if (!target) {
-        await interaction.reply({ content: "Sorry, I can't find this user!", flags: MessageFlags.Ephemeral });
-        return;
-    }
-    const definition = definitions.get(interaction.options.getSubcommand());
-    if (!definition) throw new Error('Unknown moderator level');
-    const { guild, database } = authorized;
-    if (!await database.users.findUnique({ where: { accountId: target.id } })) await createUser(database, target);
-    if (!await database.guilds.findUnique({ where: { guildId: guild.id } })) await createGuild(database, guild);
+    const prepared = await prepareModeratorChange(interaction, context);
+    if (!prepared) return;
+    const { guild, database, target, definition } = prepared;
     const where = { guildId: guild.id, accountId: target.id };
     const current = await database.moderators.findFirst({ where });
     if (current) await database.moderators.deleteMany({ where });
@@ -77,69 +66,7 @@ export async function addModerator(interaction: CommandInteraction, context: Com
     }
 }
 
-async function createUser(database: SettingsDatabase, target: CommandUser) {
-    const createdTimestamp = moment(target.createdTimestamp).format('YYYY-MM-DD HH-mm-ss');
-
-    await database.users.create({
-        data: {
-            accountId:        target.id,
-            username:         target.username,
-            discriminator:    target.discriminator,
-            avatar:           target.avatarURL({ forceStatic: false }),
-            bot:              target.bot,
-            createdTimestamp: createdTimestamp
-        }
-    });
-}
-
-async function createGuild(database: SettingsDatabase, guild: CommandGuild) {
-    const guildCreatedTimestamp = moment(guild.createdTimestamp).format('YYYY-MM-DD');
-
-    const joinedTimestamp = moment(guild.joinedTimestamp).format('YYYY-MM-DD HH-mm-ss');
-
-    await database.guilds.create({
-        data: {
-            guildId:                  guild.id,
-            available:                guild.available,
-            createdTimestamp:         guildCreatedTimestamp,
-            joinedTimestamp:          joinedTimestamp,
-            large:                    guild.large,
-            maximumMembers:           guild.maximumMembers,
-            maximumPresences:         guild.maximumPresences,
-            memberCount:              guild.memberCount,
-            partnered:                guild.partnered,
-            premiumSubscriptionCount: guild.premiumSubscriptionCount,
-            premiumTier:              databaseEnums.premiumTier[guild.premiumTier],
-            verified:                 guild.verified,
-
-            GuildSettings: {
-                create: {
-                    afkChannelID:                guild.afkChannelId,
-                    afkTimeout:                  guild.afkTimeout,
-                    bannerURL:                   guild.bannerURL({ forceStatic: false }),
-                    defaultMessageNotifications: databaseEnums.defaultMessageNotifications[guild.defaultMessageNotifications],
-                    description:                 guild.description,
-                    explicitContentFilter:       databaseEnums.explicitContentFilter[guild.explicitContentFilter],
-                    iconURL:                     guild.iconURL({ forceStatic: false }),
-                    mfaLevel:                    databaseEnums.mfaLevel[guild.mfaLevel],
-                    name:                        guild.name,
-                    nameAcronym:                 guild.nameAcronym,
-                    ownerID:                     guild.ownerId,
-                    preferredLocale:             guild.preferredLocale,
-                    rulesChannelID:              guild.rulesChannelId,
-                    shardID:                     guild.shardId,
-                    splashURL:                   guild.splashURL(),
-                    systemChannelID:             guild.systemChannelId,
-                    publicUpdatesChannelId:      guild.publicUpdatesChannelId,
-                    vanityURLCode:               guild.vanityURLCode,
-                    verificationLevel:           databaseEnums.verificationLevel[guild.verificationLevel]
-                }
-            }
-        }
-    });
-}
-
-export async function deleteModerator(interaction: CommandInteraction, context: CommandContext): Promise<void> {
+async function prepareModeratorChange(interaction: CommandInteraction, context: CommandContext) {
     const authorized = await authorizeSettings(interaction, context);
     if (!authorized) return;
     const target = interaction.options.getUser('target');
@@ -150,8 +77,19 @@ export async function deleteModerator(interaction: CommandInteraction, context: 
     const definition = definitions.get(interaction.options.getSubcommand());
     if (!definition) throw new Error('Unknown moderator level');
     const { guild, database } = authorized;
-    if (!await database.users.findUnique({ where: { accountId: target.id } })) await createUser(database, target);
-    if (!await database.guilds.findUnique({ where: { guildId: guild.id } })) await createGuild(database, guild);
+    if (!await database.users.findUnique({ where: { accountId: target.id } })) await database.users.create({ data: serializeUser(target) });
+    if (!await database.guilds.findUnique({ where: { guildId: guild.id } })) {
+        await database.guilds.create({ data: {
+            ...serializeGuild(guild), GuildSettings: { create: serializeGuildSettings(guild) },
+        } });
+    }
+    return { guild, database, target, definition };
+}
+
+export async function deleteModerator(interaction: CommandInteraction, context: CommandContext): Promise<void> {
+    const prepared = await prepareModeratorChange(interaction, context);
+    if (!prepared) return;
+    const { guild, database, target, definition } = prepared;
     const where = { guildId: guild.id, accountId: target.id };
     const current = await database.moderators.findFirst({ where: { ...where, level: definition.level } });
     if (current) await database.moderators.deleteMany({ where });

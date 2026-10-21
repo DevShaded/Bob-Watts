@@ -1,3 +1,4 @@
+import { respond } from './interaction-response.mjs';
 import { serverinfo } from './commands/serverinfo.mjs';
 import { createResourceEvents } from './events.mjs';
 import type { SendLog, GetGuildInformation } from './event-resources.mjs';
@@ -93,14 +94,9 @@ export function createEvents({ commandRegistry, reportReady, reportError, http, 
                 });
             } catch (error) {
                 reportError(error);
-                const response = { content: 'Well that didn\'t work, try another command maybe?' };
-                if (interaction.deferred && !interaction.replied) {
-                    await interaction.editReply(response);
-                } else if (interaction.replied) {
-                    await interaction.followUp({ ...response, flags: MessageFlags.Ephemeral });
-                } else {
-                    await interaction.reply({ ...response, flags: MessageFlags.Ephemeral });
-                }
+                await respond(interaction, {
+                    content: 'Well that didn\'t work, try another command maybe?', flags: MessageFlags.Ephemeral,
+                });
             }
         },
     }];

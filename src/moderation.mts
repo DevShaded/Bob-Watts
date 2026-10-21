@@ -1,10 +1,11 @@
-import type { ModerationMember } from './moderation-contracts.mjs';
-import moment from 'moment';
-import type { APIEmbed, InteractionReplyOptions } from 'discord.js';
+import type { ModerationDatabase, ModerationMember } from './moderation-contracts.mjs';
+import type { APIEmbed } from 'discord.js';
 import { MessageFlags, PermissionFlagsBits } from 'discord.js';
-import type { CommandContext, CommandInteraction } from './contracts.mjs';
+import type { CommandContext, CommandGuild, CommandInteraction } from './contracts.mjs';
 import type { ModeratorLevel } from './moderator-level.mjs';
 import { verifyModeratorLevel } from './moderator-level.mjs';
+import { serializeUser } from './resource-serialization.mjs';
+import { respond } from './interaction-response.mjs';
 
 export async function executeModeration(interaction: CommandInteraction, context: CommandContext): Promise<void> {
     const guild = interaction.guild;
@@ -69,9 +70,9 @@ export async function executeModeration(interaction: CommandInteraction, context
         await respond(interaction, { content: "Sorry! I can't find this user!", flags: MessageFlags.Ephemeral });
         return;
     }
-    if ((action === 'ban' && (!target.bannable || target.id === interaction.client.user?.id))
-        || (action === 'kick' && (!target.kickable || target.id === interaction.client.user?.id))) {
-        await respond(interaction, { embeds: [errorEmbed(interaction, action === 'kick' ? 'This user is not kickable!' : 'This user is not bannable!')], flags: MessageFlags.Ephemeral });
+    const ineligible = typeof action === 'object' ? action.ineligible?.(target, interaction.client.user?.id) : undefined;
+    if (ineligible) {
+        await respond(interaction, { embeds: [errorEmbed(interaction, ineligible)], flags: MessageFlags.Ephemeral });
         return;
     }
     const selfDenial = policy.selfDenial;
@@ -106,17 +107,13 @@ export async function executeModeration(interaction: CommandInteraction, context
     }
     const reason = interaction.options.getString('reason') || 'No reason provided';
     const days = interaction.options.getInteger?.('days') ?? 0;
-    if ((action === 'mute' || action === 'ban') && (!Number.isSafeInteger(days) || days < 0 || !Number.isSafeInteger(days * 86400000) || (action === 'ban' && days > 7))) {
+    if (typeof action === 'object' && action.validDays && !action.validDays(days)) {
         await respond(interaction, { content: 'Please provide a valid number of days.', flags: MessageFlags.Ephemeral });
         return;
     }
     const user = target.user;
     if (!await database.users.findUnique({ where: { accountId: user.id } })) {
-        await database.users.create({ data: {
-            accountId: user.id, username: user.username, discriminator: user.discriminator,
-            avatar: user.avatarURL({ forceStatic: false }), bot: user.bot,
-            createdTimestamp: moment(user.createdTimestamp).format('YYYY-MM-DD HH-mm-ss'),
-        } });
+        await database.users.create({ data: serializeUser(user) });
     }
     if (action === 'clear') {
         const amount = Math.max(1, interaction.options.getInteger?.('amount') ?? 1);
@@ -175,63 +172,25 @@ export async function executeModeration(interaction: CommandInteraction, context
         }
         return;
     }
-    const voiceId = target.voice.channel?.id;
-    if (action === 'voiceKick' && !voiceId) {
-        await respond(interaction, { embeds: [errorEmbed(interaction, `<@${target.id}> is not in a voice channel!`)], flags: MessageFlags.Ephemeral });
-        return;
-    }
-    if (action === 'voiceKick') {
-        await target.voice.disconnect(reason);
-    } else if (action === 'mute' || action === 'unmute') {
-        const role = settings?.mute_role;
-        if (!role) {
-            await respond(interaction, { embeds: [errorEmbed(interaction, 'This server has not setup a mute role. Set one up with `/set muterole`')], flags: MessageFlags.Ephemeral });
-            return;
-        }
-        if (action === 'mute' ? target.roles.cache.has(role) : !target.roles.cache.has(role)) {
-            await respond(interaction, { content: action === 'mute' ? 'It looks like this user is already muted!' : 'It looks like this user is not muted!', flags: MessageFlags.Ephemeral });
-            return;
-        }
-        if (action === 'unmute') await target.roles.remove(role);
-        else await target.roles.add(role);
-        if (action === 'mute' && days > 0) {
-            const schedule = context.schedule ?? scheduleModeration;
-            schedule(days * 86400000, async () => {
-                try {
-                    await target.roles.remove(role);
-                    await notify(interaction, context, target, `Your mute cool down is finished in **${guild.name}**`);
-                } catch (error) { context.reportError?.(error); }
-            });
-        }
-    } else if (action === 'kick') await target.kick(reason);
-    else if (action === 'ban') await target.ban({ reason, deleteMessageSeconds: days * 86400 });
-    await database.infractions.create({ data: { guildId: guild.id, accountId: target.id, reason, type: action === 'warn' ? 'warning' : interaction.commandName, expires: action === 'mute' && days > 0 ? `${String(days)} day(s)` : null } });
-    const description = action === 'voiceKick' ? `This user has been kicked from <#${voiceId ?? ''}>` : `This user has been ${policy.verb}!`;
+    const result = await action.execute({ interaction, context, guild, target, reason, days, settings });
+    if (!result) return;
+    await database.infractions.create({ data: {
+        guildId: guild.id, accountId: target.id, reason, type: action.infractionType, expires: result.expires ?? null,
+    } });
+    const description = result.description ?? `This user has been ${policy.verb}!`;
     const details = actionDetails(interaction, target, description, reason, logId ? policy.label : undefined);
     if (log?.send) await log.send({ embeds: [details] });
     await respond(interaction, {
-        embeds: [logId ? { ...embed(interaction, `That user has been ${action === 'voiceKick' ? 'kicked from the voice channel' : policy.verb}!`), author: { name: user.tag, icon_url: target.displayAvatarURL({ forceStatic: false }) } } : details],
-        ...(logId && !(action === 'mute' && days > 0) ? { flags: MessageFlags.Ephemeral } : {}),
+        embeds: [logId ? { ...embed(interaction, `That user has been ${result.confirmationVerb ?? policy.verb}!`), author: { name: user.tag, icon_url: target.displayAvatarURL({ forceStatic: false }) } } : details],
+        ...(logId && !result.publicLoggedReply ? { flags: MessageFlags.Ephemeral } : {}),
     });
-    if (action === 'mute' || action === 'unmute' || (logId && (action === 'warn' || action === 'voiceKick'))) {
-        const notificationAction = action === 'voiceKick' ? 'kicked from the voice channel' : action === 'unmute' ? 'unmuted' : action === 'mute' ? 'muted' : 'warned';
-        await notify(interaction, context, target, `You have been ${notificationAction} in **${guild.name}** for the following reason(s): \n\n${reason}`);
+    if (result.notification && (result.notification.withoutLog || logId)) {
+        await notify(interaction, context, target, `You have been ${result.notification.verb} in **${guild.name}** for the following reason(s): \n\n${reason}`);
     }
 }
 
 function embed(interaction: CommandInteraction, description?: string): APIEmbed {
     return { color: 0xff9900, ...(description ? { description } : {}), timestamp: new Date().toISOString(), footer: { text: interaction.client.user?.username ?? 'Bob Watts' } };
-}
-
-async function respond(interaction: CommandInteraction, payload: InteractionReplyOptions): Promise<void> {
-    if (interaction.deferred && !interaction.replied) {
-        // Ephemeral visibility must be selected when deferring, not while editing.
-        await interaction.editReply({ ...(payload.content !== undefined ? { content: payload.content } : {}), ...(payload.embeds ? { embeds: payload.embeds } : {}) });
-    } else if (interaction.replied) {
-        await interaction.followUp(payload);
-    } else {
-        await interaction.reply(payload);
-    }
 }
 
 function scheduleModeration(delayMs: number, action: () => Promise<void>): void {
@@ -250,7 +209,65 @@ async function notify(interaction: CommandInteraction, context: CommandContext, 
     } catch (error) { context.reportError?.(error); }
 }
 
-type ModerationAction = 'ban' | 'unban' | 'kick' | 'clean' | 'clear' | 'list' | 'mute' | 'unmute' | 'warn' | 'voiceKick';
+interface MemberActionContext {
+    readonly interaction: CommandInteraction;
+    readonly context: CommandContext;
+    readonly guild: CommandGuild;
+    readonly target: ModerationMember;
+    readonly reason: string;
+    readonly days: number;
+    readonly settings: Awaited<ReturnType<ModerationDatabase['guildLogs']['findUnique']>>;
+}
+
+interface MemberActionResult {
+    readonly description?: string;
+    readonly confirmationVerb?: string;
+    readonly expires?: string;
+    readonly publicLoggedReply?: boolean;
+    readonly notification?: { readonly verb: string; readonly withoutLog?: boolean };
+}
+
+interface MemberAction {
+    readonly infractionType: string;
+    readonly ineligible?: (target: ModerationMember, botId: string | undefined) => string | undefined;
+    readonly validDays?: (days: number) => boolean;
+    execute(options: MemberActionContext): Promise<MemberActionResult | null>;
+}
+
+type ModerationAction = 'unban' | 'clean' | 'clear' | 'list' | MemberAction;
+
+function validDuration(days: number): boolean {
+    return Number.isSafeInteger(days) && days >= 0 && Number.isSafeInteger(days * 86400000);
+}
+
+async function setMute({ interaction, context, guild, target, days, settings }: MemberActionContext, muted: boolean): Promise<MemberActionResult | null> {
+    const role = settings?.mute_role;
+    if (!role) {
+        await respond(interaction, { embeds: [errorEmbed(interaction, 'This server has not setup a mute role. Set one up with `/set muterole`')], flags: MessageFlags.Ephemeral });
+        return null;
+    }
+    if (target.roles.cache.has(role) === muted) {
+        await respond(interaction, { content: muted ? 'It looks like this user is already muted!' : 'It looks like this user is not muted!', flags: MessageFlags.Ephemeral });
+        return null;
+    }
+    if (muted) await target.roles.add(role);
+    else await target.roles.remove(role);
+    const timed = muted && days > 0;
+    if (timed) {
+        const schedule = context.schedule ?? scheduleModeration;
+        schedule(days * 86400000, async () => {
+            try {
+                await target.roles.remove(role);
+                await notify(interaction, context, target, `Your mute cool down is finished in **${guild.name}**`);
+            } catch (error) { context.reportError?.(error); }
+        });
+    }
+    return {
+        ...(timed ? { expires: `${String(days)} day(s)` } : {}),
+        publicLoggedReply: timed,
+        notification: { verb: muted ? 'muted' : 'unmuted', withoutLog: true },
+    };
+}
 
 interface ModerationPolicy {
     readonly action: ModerationAction;
@@ -265,16 +282,51 @@ interface ModerationPolicy {
 const manageMessages = { permission: PermissionFlagsBits.ManageMessages, permissionName: 'MANAGE_MESSAGES', level: 2 } satisfies Pick<ModerationPolicy, 'permission' | 'permissionName' | 'level'>;
 const banMembers = { permission: PermissionFlagsBits.BanMembers, permissionName: 'BAN_MEMBERS', level: 2 } satisfies Pick<ModerationPolicy, 'permission' | 'permissionName' | 'level'>;
 const moderationPolicies = new Map<string, ModerationPolicy>([
-    ['ban', { action: 'ban', ...banMembers, label: 'Ban', verb: 'banned' }],
+    ['ban', { ...banMembers, label: 'Ban', verb: 'banned', action: {
+        infractionType: 'ban', validDays: days => validDuration(days) && days <= 7,
+        ineligible: (target, botId) => !target.bannable || target.id === botId ? 'This user is not bannable!' : undefined,
+        async execute({ target, reason, days }) {
+            await target.ban({ reason, deleteMessageSeconds: days * 86400 });
+            return {};
+        },
+    } }],
     ['unban', { action: 'unban', ...banMembers, label: 'Unban', verb: 'unbanned' }],
-    ['kick', { action: 'kick', permission: PermissionFlagsBits.KickMembers, permissionName: 'KICK_MEMBERS', level: 2, label: 'Kick', verb: 'kicked' }],
+    ['kick', { permission: PermissionFlagsBits.KickMembers, permissionName: 'KICK_MEMBERS', level: 2, label: 'Kick', verb: 'kicked', action: {
+        infractionType: 'kick',
+        ineligible: (target, botId) => !target.kickable || target.id === botId ? 'This user is not kickable!' : undefined,
+        async execute({ target, reason }) {
+            await target.kick(reason);
+            return {};
+        },
+    } }],
     ['clean', { action: 'clean', ...manageMessages, label: 'Clean', verb: 'cleaned', selfDenial: 'Cannot clear messages from this user!' }],
     ['clearinfractions', { action: 'clear', permission: PermissionFlagsBits.Administrator, permissionName: 'ADMINISTRATOR', level: 1, label: 'Clear Infractions', verb: 'cleared', selfDenial: 'Cannot clear infractions from this user!' }],
     ['infractions', { action: 'list', ...manageMessages, level: 3, label: 'Infractions', verb: 'listed', selfDenial: 'Cannot get infractions from this user!' }],
-    ['mute', { action: 'mute', ...manageMessages, label: 'Mute', verb: 'muted', selfDenial: 'This user is not mutable!' }],
-    ['unmute', { action: 'unmute', ...manageMessages, label: 'Unmute', verb: 'unmuted' }],
-    ['warn', { action: 'warn', ...manageMessages, level: 3, label: 'Warning', verb: 'warned' }],
-    ['vckick', { action: 'voiceKick', permission: PermissionFlagsBits.MoveMembers, permissionName: 'MOVE_MEMBERS', level: 2, label: 'Voice channel kick', verb: 'kicked' }],
+    ['mute', { ...manageMessages, label: 'Mute', verb: 'muted', selfDenial: 'This user is not mutable!', action: {
+        infractionType: 'mute', validDays: validDuration,
+        execute: options => setMute(options, true),
+    } }],
+    ['unmute', { ...manageMessages, label: 'Unmute', verb: 'unmuted', action: {
+        infractionType: 'unmute', execute: options => setMute(options, false),
+    } }],
+    ['warn', { ...manageMessages, level: 3, label: 'Warning', verb: 'warned', action: {
+        infractionType: 'warning', execute: () => Promise.resolve({ notification: { verb: 'warned' } }),
+    } }],
+    ['vckick', { permission: PermissionFlagsBits.MoveMembers, permissionName: 'MOVE_MEMBERS', level: 2, label: 'Voice channel kick', verb: 'kicked', action: {
+        infractionType: 'vckick',
+        async execute({ interaction, target, reason }) {
+            const voiceId = target.voice.channel?.id;
+            if (!voiceId) {
+                await respond(interaction, { embeds: [errorEmbed(interaction, `<@${target.id}> is not in a voice channel!`)], flags: MessageFlags.Ephemeral });
+                return null;
+            }
+            await target.voice.disconnect(reason);
+            return {
+                description: `This user has been kicked from <#${voiceId}>`,
+                confirmationVerb: 'kicked from the voice channel', notification: { verb: 'kicked from the voice channel' },
+            };
+        },
+    } }],
 ]);
 
 function actionDetails(interaction: CommandInteraction, target: ModerationMember, description: string, reason: string, action?: string): APIEmbed {

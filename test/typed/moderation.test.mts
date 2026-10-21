@@ -76,6 +76,7 @@ await test('kick uses the Discord string reason and preserves permission and kic
     interaction.strings.set('reason', 'Abuse');
     await gateway.dispatch(interaction);
     assert.deepEqual(interaction.target.kicks, ['Abuse']);
+    assert.deepEqual(interaction.target.bans, []);
     assert.deepEqual(database.writes, [{ guildId: 'guild', accountId: '999', reason: 'Abuse', type: 'kick', expires: null }]);
     const blocked = new ModerationInteraction('kick');
     blocked.executor.permissions.add('KickMembers');
@@ -131,6 +132,7 @@ await test('mute adds the configured role and records timed and indefinite durat
         if (days !== undefined) interaction.integers.set('days', days);
         await gateway.dispatch(interaction);
         assert.deepEqual(interaction.target.addedRoles, ['muted']);
+        assert.deepEqual(interaction.target.bans, []);
         assert.deepEqual(database.writes, [{ guildId: 'guild', accountId: '999', reason: 'No reason provided', type: 'mute', expires: days ? '2 day(s)' : null }]);
         if (days) {
             assert.equal(scheduled[0]?.delay, 172800000);
@@ -172,6 +174,7 @@ await test('unmute removes only the configured role and rejects members who are 
     interaction.target.roles.cache.set('muted', { id: 'muted' });
     await gateway.dispatch(interaction);
     assert.deepEqual(interaction.target.removedRoles, ['muted']);
+    assert.deepEqual(interaction.target.bans, []);
     assert.deepEqual(database.writes, [{ guildId: 'guild', accountId: '999', reason: 'No reason provided', type: 'unmute', expires: null }]);
     assert.equal(interaction.logs.length, 1);
     const unmuted = new ModerationInteraction('unmute');
@@ -189,6 +192,7 @@ await test('voice kick disconnects members and safely reports an absent voice ch
     interaction.strings.set('reason', 'Noise');
     await gateway.dispatch(interaction);
     assert.deepEqual(interaction.target.disconnects, ['Noise']);
+    assert.deepEqual(interaction.target.bans, []);
     assert.deepEqual(database.writes, [{ guildId: 'guild', accountId: '999', reason: 'Noise', type: 'vckick', expires: null }]);
     assert.partialDeepStrictEqual(interaction.responses[0]?.payload, { embeds: [{ description: 'This user has been kicked from <#voice>' }] });
     const absent = new ModerationInteraction('vckick');
