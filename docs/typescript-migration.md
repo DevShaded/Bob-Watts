@@ -70,3 +70,20 @@ Behavior corrections covered through dispatch:
 - Discord reply failures after successful settings writes reach application error handling instead of being caught and reported as database failures. Database write failures retain their operation-specific private responses.
 
 Offline tests cover authorization across all four commands, every setting's creation/update/removal fields, missing configuration, moderator level replacement and exact-level deletion, blocked DMs, initialization relationships and stored enum values, and guild/global registration payloads.
+
+## Guild, member, and message checkpoint (#33)
+
+The typed application registers all seven existing guild/member events, plus message delivery, client readiness, and interaction dispatch. Readiness remains one-time; the other events repeat. `/serverinfo` joins the shared Public command registry. Legacy JavaScript remains until #34.
+
+`startBot` accepts a narrow `Persistence` capability for event writes, stored guild information, logging settings, and the latest bot activity. Command context exposes that capability as `persistence`. The Discord gateway provides `sendLog` and `getGuildInformation`; their contracts describe only sendable-channel operations and the guild, presence count, and role IDs needed by this slice. Event resources use narrow structural types, including nullable users on partial member removals. Tests supply those declared capabilities rather than incomplete Discord instances. Production settings commands and event persistence share one lazily created Prisma client.
+
+Guild, settings, user, member, channel, thread, message, and message-association writes retain the Prisma schema and historical enum strings. Activity selection retains the stored type mappings, unknown-type Playing fallback, and default Watching activity. Bot/webhook messages remain ignored; direct-message `!help` retains the announcement and invitation button. Logging guild/channel IDs are optional at startup; development command registration still requires its target guild ID.
+
+Behavior corrections covered through startup event delivery or command dispatch:
+
+- Missing welcome logging no longer prevents the configured join role from being applied.
+- Thread messages create the channel row required by their message relationship; thread owners are persisted before their thread relationship. Archived dates become valid stored strings, and nullable member join dates remain null.
+- Uncached message members and partial member removals no longer require unavailable member/user properties.
+- `/serverinfo` handles absent guilds and settings with a private unavailable response, reloads initialized settings, supplies emoji fallbacks, and produces a valid role field when only the everyone role exists.
+
+The existing unique guild constraint on `ThreadChannels` and global member/account uniqueness on `GuildMembers` remain schema limitations. This checkpoint does not change those constraints or discard existing rows to bypass them. No live Discord or production-database verification is required by the offline checks.

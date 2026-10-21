@@ -8,8 +8,8 @@ export interface DatabaseConfig {
 export interface StartupConfig extends DatabaseConfig {
     environment: ApplicationEnvironment;
     token: string;
-    guildId: string;
-    channelId: string;
+    guildId: string | undefined;
+    channelId: string | undefined;
     weatherApi: string | undefined;
 }
 
@@ -54,8 +54,8 @@ export function readStartupConfig(env: Environment): StartupConfig {
         environment: applicationEnvironment(env),
         token: required(env, 'APP_TOKEN'),
         databaseUrl: required(env, 'DATABASE_URL'),
-        guildId: required(env, 'APP_GUILD_ID'),
-        channelId: required(env, 'APP_CHANNEL_ID'),
+        guildId: env.APP_GUILD_ID?.trim() || undefined,
+        channelId: env.APP_CHANNEL_ID?.trim() || undefined,
         weatherApi: env.APP_WEATHER_API?.trim() || undefined,
     };
 }

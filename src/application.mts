@@ -1,3 +1,5 @@
+import { createPersistence } from './persistence.mjs';
+import type { Persistence } from './persistence.mjs';
 import { createDatabase } from './database.mjs';
 import type { SettingsDatabase } from './settings-database.mjs';
 import { GatewayIntentBits, Partials, REST, Routes } from 'discord.js';
@@ -13,11 +15,13 @@ export async function startBot({
     createGateway = createDiscordGateway,
     commandRegistry = commands,
     http,
+    persistence,
     reportError = console.error,
     reportReady = () => { console.log('Bot has successfully signed in and is listening to events'); },
 }: {
     database?: SettingsDatabase;
     http?: HttpTransport;
+    persistence?: Persistence;
     env?: Environment;
     createGateway?: GatewayFactory;
     commandRegistry?: readonly Command[];
@@ -39,9 +43,14 @@ export async function startBot({
         partials: [Partials.Message, Partials.Channel, Partials.Reaction],
         allowedMentions: { parse: ['users', 'roles'], repliedUser: true },
     });
+    let ownedDatabase: ReturnType<typeof createDatabase> | undefined;
+    const getOwnedDatabase = (): ReturnType<typeof createDatabase> => ownedDatabase ??= createDatabase(config);
     for (const event of createEvents({
         commandRegistry, reportReady, reportError, http, weatherApi: config.weatherApi,
-        getDatabase: () => database ??= createDatabase(config),
+        getDatabase: () => database ?? getOwnedDatabase(),
+        persistence: persistence ?? createPersistence(getOwnedDatabase),
+        sendLog: gateway.sendLog, getGuildInformation: gateway.getGuildInformation,
+        logGuildId: config.guildId, logChannelId: config.channelId,
     })) {
         gateway.subscribe(event, reportError);
     }
