@@ -453,7 +453,7 @@ await test('all moderation commands preserve Discord permission alternatives and
         ['clearinfractions', PermissionFlagsBits.Administrator, [true, false, false]], ['warn', PermissionFlagsBits.ManageMessages, [true, true, true]],
     ];
     for (const [commandName, permission, outcomes] of cases) {
-        for (const level of [null, 1, 2, 3]) {
+        for (const level of [null, 0, 1, 2, 3, 4]) {
             const gateway = new OfflineGateway();
             const database = new ModerationStore();
             database.level = level;
@@ -469,7 +469,7 @@ await test('all moderation commands preserve Discord permission alternatives and
             // With no database moderator, verify the command's Discord permission alternative.
             if (level === null) interaction.executor.permissions.add(permission);
             await gateway.dispatch(interaction);
-            const expectedAllowed = level === null || outcomes[level - 1];
+            const expectedAllowed = level === null || level === 0 || (level < 4 && outcomes[level - 1]);
             const denial = interaction.responses[0]?.payload.content?.includes('You do not have permission');
             assert.equal(Boolean(denial), !expectedAllowed, `${commandName}: level ${String(level)}`);
             assert.equal(interaction.responses.length, 1);

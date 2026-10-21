@@ -12,4 +12,4 @@ Bugs discovered during the migration are in scope for fixes, accepting a broader
 
 Explicit typed registries will replace folder-based command and event discovery. Startup, command registration, and help will share the command registry, accepting the need to add a registry entry for each new command in exchange for compile-time checks of registered handlers and consistent command metadata.
 
-The complete specification and agreed testing boundaries are published in [GitHub issue #26](https://github.com/DevShaded/Bob-Watts/issues/26). Implementation has not started.
+The complete specification and agreed testing boundaries are published in [GitHub issue #26](https://github.com/DevShaded/Bob-Watts/issues/26). Implemented through checkpoints #27–34 on the migration integration branch. All maintained application, operational, test, Prisma configuration, and ESLint configuration code is TypeScript; PM2 configuration is JSON. Production runs the compiled ESM entrypoints.

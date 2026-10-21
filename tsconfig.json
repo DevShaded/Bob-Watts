@@ -14,10 +14,19 @@
     "noUnusedParameters": true,
     "verbatimModuleSyntax": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "rootDir": ".",
     "outDir": "dist",
     "noEmit": true
   },
-  "include": ["src/**/*.mts", "test/typed/**/*.mts", "test/production/**/*.mts"]
+  "include": [
+    "src/**/*.mts",
+    "test/typed/**/*.mts",
+    "test/production/**/*.mts",
+    "scripts/**/*.mts",
+    "*.mts",
+    "*.ts"
+  ]
 }

@@ -1,3 +1,4 @@
+import { ChannelType, GuildPremiumTier, GuildDefaultMessageNotifications, GuildExplicitContentFilter, GuildMFALevel, GuildVerificationLevel } from 'discord.js';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { startBot } from '../../src/application.mjs';
@@ -22,7 +23,7 @@ await test('startup selects the latest stored activity once and preserves unknow
     assert.deepEqual(activities, [{ name: 'A game', options: { type: 0 } }]);
 });
 
-import { offlinePersistence, guildState, memberState, messageState, threadState } from './event-fixtures.mjs';
+import { offlinePersistence, guildState, memberState, messageState, channelState, threadState } from './event-fixtures.mjs';
 
 await test('guild events preserve historical stored enums and mark unavailable guilds', async () => {
     const gateway = new OfflineGateway();
@@ -233,4 +234,56 @@ await test('thread delivery resolves a distinct owner and persists the reference
         fetchUser: id => Promise.resolve({ ...message.author, id, username: 'Owner' }),
     });
     assert.deepEqual(threadOwners, ['owner']);
+});
+
+await test('guild event writes retain every historical guild enum representation', async () => {
+    const cases = [
+        { premiumTier: GuildPremiumTier.None, defaultMessageNotifications: GuildDefaultMessageNotifications.AllMessages, explicitContentFilter: GuildExplicitContentFilter.Disabled, mfaLevel: GuildMFALevel.None, verificationLevel: GuildVerificationLevel.None,
+            expected: { tier: 'NONE', notifications: 'ALL_MESSAGES', filter: 'DISABLED', mfa: 'NONE', verification: 'NONE' } },
+        { premiumTier: GuildPremiumTier.Tier1, defaultMessageNotifications: GuildDefaultMessageNotifications.OnlyMentions, explicitContentFilter: GuildExplicitContentFilter.MembersWithoutRoles, mfaLevel: GuildMFALevel.Elevated, verificationLevel: GuildVerificationLevel.Low,
+            expected: { tier: 'TIER_1', notifications: 'ONLY_MENTIONS', filter: 'MEMBERS_WITHOUT_ROLES', mfa: 'ELEVATED', verification: 'LOW' } },
+        { premiumTier: GuildPremiumTier.Tier2, defaultMessageNotifications: GuildDefaultMessageNotifications.OnlyMentions, explicitContentFilter: GuildExplicitContentFilter.AllMembers, mfaLevel: GuildMFALevel.Elevated, verificationLevel: GuildVerificationLevel.Medium,
+            expected: { tier: 'TIER_2', notifications: 'ONLY_MENTIONS', filter: 'ALL_MEMBERS', mfa: 'ELEVATED', verification: 'MEDIUM' } },
+        { premiumTier: GuildPremiumTier.Tier3, defaultMessageNotifications: GuildDefaultMessageNotifications.OnlyMentions, explicitContentFilter: GuildExplicitContentFilter.AllMembers, mfaLevel: GuildMFALevel.Elevated, verificationLevel: GuildVerificationLevel.High,
+            expected: { tier: 'TIER_3', notifications: 'ONLY_MENTIONS', filter: 'ALL_MEMBERS', mfa: 'ELEVATED', verification: 'HIGH' } },
+        { premiumTier: GuildPremiumTier.Tier3, defaultMessageNotifications: GuildDefaultMessageNotifications.OnlyMentions, explicitContentFilter: GuildExplicitContentFilter.AllMembers, mfaLevel: GuildMFALevel.Elevated, verificationLevel: GuildVerificationLevel.VeryHigh,
+            expected: { tier: 'TIER_3', notifications: 'ONLY_MENTIONS', filter: 'ALL_MEMBERS', mfa: 'ELEVATED', verification: 'VERY_HIGH' } },
+    ] satisfies (Partial<ReturnType<typeof guildState>> & { expected: {
+        tier: string; notifications: string; filter: string; mfa: string; verification: string;
+    } })[];
+    for (const { expected, ...values } of cases) {
+        const gateway = new OfflineGateway();
+        const writes: unknown[] = [];
+        await startBot({ env: startupEnvironment, createGateway: () => gateway, persistence: {
+            ...offlinePersistence(), saveGuild: (guild, settings) => { writes.push({ guild, settings }); return Promise.resolve(); },
+        } });
+        const event = gateway.events.find(event => event.name === 'guildCreate');
+        assert.ok(event);
+        await event.execute({ ...guildState(), ...values });
+        assert.partialDeepStrictEqual(writes, [{
+            guild: { premiumTier: expected.tier },
+            settings: { defaultMessageNotifications: expected.notifications, explicitContentFilter: expected.filter,
+                mfaLevel: expected.mfa, verificationLevel: expected.verification },
+        }]);
+    }
+});
+
+await test('message delivery preserves all supported guild channel and thread enum strings', async () => {
+    for (const [type, expected] of [
+        [ChannelType.GuildText, 'GUILD_TEXT'], [ChannelType.GuildVoice, 'GUILD_VOICE'], [ChannelType.GuildCategory, 'GUILD_CATEGORY'], [ChannelType.GuildAnnouncement, 'GUILD_NEWS'],
+        [ChannelType.AnnouncementThread, 'GUILD_NEWS_THREAD'], [ChannelType.PublicThread, 'GUILD_PUBLIC_THREAD'], [ChannelType.PrivateThread, 'GUILD_PRIVATE_THREAD'],
+        [ChannelType.GuildStageVoice, 'GUILD_STAGE_VOICE'], [ChannelType.GuildForum, 'GUILD_FORUM'], [ChannelType.GuildMedia, 'GUILD_MEDIA'],
+    ] satisfies [NonNullable<ReturnType<typeof messageState>['channel']>['type'], string][]) {
+        const gateway = new OfflineGateway();
+        const writes: unknown[] = [];
+        await startBot({ env: startupEnvironment, createGateway: () => gateway, persistence: {
+            ...offlinePersistence(), saveChannel: data => { writes.push(data); return Promise.resolve(); },
+        } });
+        const event = gateway.events.find(event => event.name === 'messageCreate');
+        assert.ok(event);
+        const channel = type === ChannelType.AnnouncementThread || type === ChannelType.PublicThread || type === ChannelType.PrivateThread
+            ? { ...threadState(), type } : { ...channelState(), type };
+        await event.execute({ ...messageState(), channel });
+        assert.partialDeepStrictEqual(writes, [{ type: expected }]);
+    }
 });

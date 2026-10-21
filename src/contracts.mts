@@ -36,8 +36,7 @@ export interface CommandMember {
     };
 }
 
-// Only the Discord capabilities consumed by the migrated commands belong here.
-// Extend this boundary as subsequent behavior slices join the registry.
+// Only the Discord capabilities consumed by commands belong here.
 export interface CommandInteraction {
     readonly commandName: string;
     readonly client: {

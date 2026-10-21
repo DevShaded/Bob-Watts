@@ -1,8 +1,9 @@
 import js from '@eslint/js';
+import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
-export default tseslint.config({
-    files: ['src/**/*.mts', 'test/typed/**/*.mts', 'test/production/**/*.mts'],
+export default defineConfig({ ignores: ['dist/**', 'node_modules/**'] }, {
+    files: ['**/*.mts', '**/*.ts'],
     extends: [js.configs.recommended, ...tseslint.configs.strictTypeChecked],
     languageOptions: {
         parserOptions: {

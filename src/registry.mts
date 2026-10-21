@@ -34,7 +34,7 @@ import { randomdog } from './commands/randomdog.mjs';
 import { weather } from './commands/weather.mjs';
 import { randomcat } from './commands/randomcat.mjs';
 
-// Migration checkpoint: remaining commands join this explicit registry in #30–33.
+// Startup, registration, setup validation, and help share these definitions.
 export const commands: readonly Command[] = [
     eightBall, coinflip, cookie, diceroll, hug, kiss, rps, slap,
     botinfo, help, ping, userinfo, serverinfo,
