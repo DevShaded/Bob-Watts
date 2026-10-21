@@ -1,3 +1,5 @@
+import type { ReadyClient, GuildState, MemberState, RemovedMember, MessageState, SendLog, GetGuildInformation } from './event-resources.mjs';
+import type { Persistence } from './persistence.mjs';
 import type {
     ClientOptions,
     InteractionEditReplyOptions,
@@ -64,6 +66,8 @@ export interface HttpTransport {
 
 export interface CommandContext {
     readonly commands: readonly CommandMetadata[];
+    readonly persistence?: Persistence;
+    readonly getGuildInformation?: GetGuildInformation | undefined;
     readonly http?: HttpTransport;
     readonly weatherApi?: string | undefined;
 }
@@ -74,7 +78,15 @@ export interface Command extends CommandMetadata {
 
 // Event names match Discord. Non-chat-input interactions carry no command.
 export interface EventArguments {
-    clientReady: [];
+    clientReady: [client?: ReadyClient];
+    guildCreate: [guild: GuildState];
+    guildDelete: [guild: GuildState];
+    guildUnavailable: [guild: GuildState];
+    guildUpdate: [oldGuild: GuildState, newGuild: GuildState];
+    guildMemberAdd: [member: MemberState];
+    guildMemberRemove: [member: RemovedMember];
+    guildMemberUpdate: [oldMember: RemovedMember, newMember: MemberState];
+    messageCreate: [message: MessageState];
     interactionCreate: [interaction: CommandInteraction | null];
 }
 
@@ -89,6 +101,8 @@ export type RegisteredEvent = {
 }[keyof EventArguments];
 
 export interface Gateway {
+    sendLog?: SendLog;
+    getGuildInformation?: GetGuildInformation;
     subscribe(event: RegisteredEvent, reportError: (error: unknown) => void): void;
     login(token: string): Promise<unknown>;
     destroy(): Promise<void>;

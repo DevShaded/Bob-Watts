@@ -36,9 +36,9 @@ await test('typed registration repeatedly sends all migrated definitions to guil
         const names = request.body.map(definition => definition.name);
         assert.deepEqual(names.slice().sort(), [
             '8ball', 'botinfo', 'coinflip', 'cookie', 'diceroll', 'help',
-            'hug', 'kiss', 'ping', 'randomcat', 'randomdog', 'rps', 'slap', 'userinfo', 'weather',
+            'hug', 'kiss', 'ping', 'randomcat', 'randomdog', 'rps', 'serverinfo', 'slap', 'userinfo', 'weather',
         ]);
-        assert.equal(new Set(names).size, 15);
+        assert.equal(new Set(names).size, 16);
         // Discord omits undefined optional fields when sending JSON.
         const serialized: unknown = JSON.parse(JSON.stringify(request.body));
         assert.deepEqual(serialized, [...publicDefinitions, ...informationDefinitions]);
@@ -167,7 +167,7 @@ await test('entrypoints validate only their required configuration before constr
         createRest: unexpected,
     }), /Missing .env values: APP_GUILD_ID/);
 
-    for (const key of ['APP_TOKEN', 'DATABASE_URL', 'APP_GUILD_ID', 'APP_CHANNEL_ID']) {
+    for (const key of ['APP_TOKEN', 'DATABASE_URL']) {
         await assert.rejects(startBot({
             env: { ...startupEnvironment, [key]: ' ' }, createGateway: unexpected,
         }), new RegExp(`Missing .env values: ${key}`));

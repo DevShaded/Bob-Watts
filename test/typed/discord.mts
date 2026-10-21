@@ -1,8 +1,11 @@
+import type { ReadyClient } from '../../src/event-resources.mjs';
 import type { InteractionEditReplyOptions, InteractionReplyOptions } from 'discord.js';
 import type { CommandInteraction, CommandMember, CommandUser, Gateway, RegisteredEvent } from '../../src/contracts.mjs';
 
 export class OfflineGateway implements Gateway {
     readonly events: RegisteredEvent[] = [];
+    getGuildInformation?: NonNullable<Gateway['getGuildInformation']>;
+    sendLog?: NonNullable<Gateway['sendLog']>;
     readonly tokens: string[] = [];
     destroyed = false;
 
@@ -28,11 +31,11 @@ export class OfflineGateway implements Gateway {
         }
     }
 
-    async ready(): Promise<void> {
+    async ready(client?: ReadyClient): Promise<void> {
         for (const event of [...this.events]) {
             if (event.name !== 'clientReady') continue;
             if (event.once) this.events.splice(this.events.indexOf(event), 1);
-            await event.execute();
+            await event.execute(client);
         }
     }
 }

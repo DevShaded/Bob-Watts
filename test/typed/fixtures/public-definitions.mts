@@ -127,5 +127,6 @@ export const publicDefinitions = [
         "name": "userinfo",
         "description": "Display information about the mentioned user in a server",
         "type": 1
-    }
+    },
+    { "options": [], "name": "serverinfo", "description": "Returns a message with server information", "type": 1 }
 ];
