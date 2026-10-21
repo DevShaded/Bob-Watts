@@ -1,0 +1,7 @@
+{
+    "apps": [{
+        "name": "Bob Watts",
+        "script": "./dist/scripts/start.mjs",
+        "watch": false
+    }]
+}

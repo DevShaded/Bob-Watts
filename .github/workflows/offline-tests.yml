@@ -1,0 +1,35 @@
+name: TypeScript verification
+
+on: [push, pull_request]
+
+permissions:
+    contents: read
+
+jobs:
+    verify:
+        name: Typecheck, lint, build, smoke, and offline tests
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
+              with:
+                  node-version-file: .nvmrc
+                  cache: npm
+            - name: Install without credentials and generate Prisma Client
+              run: |
+                  test ! -e .env
+                  npm ci
+                  npm run db:generate
+            - name: Check every maintained TypeScript source, config, and test
+              run: npm run typecheck
+            - name: Type-aware lint
+              run: npm run lint
+            - name: Compile production from clean output
+              run: |
+                  test ! -e dist
+                  npm run build
+            - name: Verify compiled Node and PM2 launches and runtime resources before test compilation
+              run: npm run smoke
+            - name: Compile and run offline tests
+              run: npm test

@@ -50,12 +50,13 @@ cp -n .env.example .env
 chmod 600 .env
 npm run db:up
 npm run db:setup
+npm run build
 npm run check
 ```
 
 `db:up` waits for MySQL to become healthy. `db:setup` applies the checked-in
 migrations and generates Prisma Client. `check` validates the Prisma schema,
-loads every slash command and event module, and queries every database model.
+validates the shared slash command and event registries, and queries every database model.
 It works before Discord credentials are added and does not contact Discord.
 These checks do not exercise command execution against a live Discord server.
 
@@ -69,9 +70,9 @@ API-compatible embed payloads. Stored guild and channel enum strings retain
 their previous format, so existing data does not need conversion.
 
 The [Prisma 7 migration](https://www.prisma.io/docs/guides/upgrade-prisma-orm/v7)
-moves the CLI connection URL to `prisma.config.js` and uses one shared MariaDB
-adapter for the bot's MySQL connection pool. The JavaScript client generator is
-retained for this CommonJS codebase. `npm ci` generates the client automatically,
+moves the CLI connection URL to `prisma.config.ts` and uses one shared MariaDB
+adapter for the bot's MySQL connection pool. The existing Prisma client generator is
+retained and consumed from TypeScript ES modules. `npm ci` generates the client automatically,
 even before `.env` exists. The database tables and migration history are unchanged.
 For hosted connections, review the MariaDB driver's connection options: Prisma 6
 URL options such as `connection_limit` are now driver options such as `connectionLimit`.
@@ -88,6 +89,82 @@ npm audit               # Include development tools such as PM2
 Tests exercise command payloads, permissions, ban history deletion, stored enum
 values, startup, and command registration with mocked network/database calls.
 Live command execution still needs a test Discord server.
+
+### TypeScript development and verification
+
+All maintained application code, scripts, tests, Prisma configuration, and ESLint
+configuration are strict TypeScript. Node.js 24 runs emitted ES modules in
+`dist/`; generated files never overwrite maintained sources. PM2 uses the
+data-only `ecosystem.config.json`.
+
+```bash
+npm run typecheck       # All maintained sources, configs, and tests
+npm run lint            # Type-aware lint; unsafe escapes and suppressions prohibited
+npm run build           # Compile production application and scripts to dist/
+npm run smoke           # Offline production Node/PM2 and runtime-resource checks
+npm test                # Compile and run TypeScript offline tests
+npm run verify          # Complete gate, in that order
+npm run dev             # Build, start, and watch emitted modules under Node 24
+npm run build:watch     # In a second terminal: recompile when TypeScript changes
+```
+
+For a clean production verification, remove generated `dist/` before building.
+CI starts without `dist/` or `.env`, installs dependencies, generates Prisma
+Client, typechecks, lints, builds, and runs the production smoke checks **before
+compiling tests**. The smoke harness runs directly under Node 24 against compiled
+production modules, from an unrelated working directory. Node and PM2 launches
+replace only external Discord SDK operations, using an isolated temporary PM2
+home; no Discord login, registration request, or database connection occurs.
+The setup tests use a narrow controlled database collaborator.
+
+`dist/src/application.mjs` exports callable `startBot(options)` and
+`registerCommands(options)`. `dist/src/setup.mjs` exports `checkSetup(options)`.
+Importing the application or CLI modules does not read `.env`, initialize a
+database, log in, or register commands. Executing a CLI explicitly loads `.env`
+and invokes its operation; failures exit with status 1. Production database
+clients open lazily, are shared across consumers, and disconnect when their
+owning gateway shuts down. Setup closes its client on success or failure.
+
+`src/registry.mts` contains all 30 commands: Fun (8), Information (3),
+Moderation (10), Public (5), Settings (4). Startup, registration, setup checks,
+and help use these shared definitions. Adding a command requires an explicit
+registry entry. Names come from slash definitions. Help sorts names within
+Fun, Moderation, Public, Settings, Information and keeps every command visible
+regardless of permissions or optional weather configuration. Tests verify exact
+names, categories, serialized registration payloads, and help output.
+
+The Discord adapter narrows incoming interactions and guild resources; event
+contracts enforce event arguments and one-time readiness versus repeated events.
+Offline tests use narrow gateway, REST, HTTP, and database interfaces rather than
+incomplete library objects or import-cache manipulation. Established payload,
+permission, ban-history, stored-enum, startup, and registration assertions remain
+covered at these application boundaries. The [migration record](docs/typescript-migration.md)
+documents preserved behavior and corrected defects.
+
+Bot information imports package metadata as JSON. The production compiler copies
+it to `dist/package.json`; smoke checks verify version lookup and help outside
+the repository working directory before test output exists.
+
+Configuration is validated by the operation that consumes it:
+
+| Operation | Required configuration |
+| --- | --- |
+| Startup | `APP_ENV`, `APP_TOKEN`, `DATABASE_URL` |
+| Registration | `APP_ENV`, `APP_TOKEN`, `APP_CLIENT_ID`; `APP_GUILD_ID` in development |
+| Setup checks | `DATABASE_URL`; missing Discord settings are reported without authentication |
+| Imports, dependency installation, Prisma generation | No environment file or credentials |
+
+`APP_ENV` accepts `development` or `production`. Startup logging guild/channel
+IDs and weather credentials remain optional. `/weather` returns a private
+unavailable response when its integration is unconfigured. Production registration
+uses the global application route; development uses the configured guild, both
+through Discord API v10. Setup queries all 14 models to check database/schema
+compatibility; it does not authenticate Discord credentials. The database schema,
+historical enum strings, and existing migrations are unchanged.
+
+ESLint loads `eslint.config.mts` using its native Node TypeScript configuration
+flag; Prisma loads `prisma.config.ts` directly. Both configs participate in strict
+typechecking and linting. No handwritten JavaScript configuration remains.
 
 As of October 14, 2026, the runtime dependency audit reports zero vulnerabilities.
 The full audit reports three high findings along the optional PM2 dependency
@@ -146,7 +223,7 @@ server and channel IDs.
 To invite the bot, open the application's **Installation** page, enable
 **Guild Install**, and select **Discord Provided Link** under **Install Link**.
 Under **Default Install Settings > Guild Install**, select the `bot` and
-`applications.commands` scopes. The legacy bot expects Administrator for its
+`applications.commands` scopes. The bot expects Administrator for its
 full moderation feature set; use a dedicated test server. Copy the install link,
 open it, choose **Add to server**, and select your test server. You need
 **Manage Server** permission to install it there. See Discord's
@@ -159,23 +236,44 @@ must manage. Administrator does not bypass Discord's
 Register the slash commands, then start the bot:
 
 ```bash
+npm run build
 npm run register
 npm start
 ```
 
 Use `/ping` in the test server to check a live response. `npm run dev` starts
-Node's watch mode for development. Stop either foreground process with Ctrl+C.
+Node's watch mode on compiled output. In a second terminal, run `npm run build:watch`
+to compile TypeScript changes and trigger restarts. Stop either foreground process with Ctrl+C.
 Changing `APP_ENV` to `production` makes `npm run register` replace the
 application's global command list.
 
-`/botinfo` reads version and uptime directly from the running Node process.
+Direct production launches use the same compiled CLI:
+
+```bash
+node dist/scripts/start.mjs
+node dist/scripts/register.mjs
+node dist/scripts/check-setup.mjs
+```
+
+Run from the repository directory so CLI `.env` loading and PM2 relative paths
+resolve to your installation. Rebuild after changing maintained sources.
+`/botinfo` reads the package version and running process uptime.
 PM2 is optional. To use it, stop the foreground bot first:
 
 ```bash
-npx pm2 start ecosystem.config.js
+npm run build
+npx pm2 start ecosystem.config.json
 npx pm2 logs "Bob Watts"
 npx pm2 stop "Bob Watts"
 ```
+
+PM2 file watching is disabled so Git fetches and generated files cannot restart
+the running bot. Use `npm run dev` for intentional development watching. To disable
+watching for an existing PM2 process, run `npx pm2 stop "Bob Watts" --watch`, then
+`npx pm2 restart "Bob Watts"`. Editing the ecosystem file alone does not change the
+daemon's saved settings.
+`/ping` reports unavailable gateway latency until Discord has supplied a valid
+heartbeat measurement, rather than displaying the initial `-1` value as a latency.
 
 ## Commands
 

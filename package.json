@@ -2,23 +2,35 @@
   "name": "bob-watts",
   "version": "3.0.0",
   "description": "A multi purpose bot including fun and epic commands",
-  "main": "index.js",
+  "main": "dist/src/application.mjs",
+  "imports": {
+    "#compiled-application": {
+      "types": "./src/application.mts",
+      "default": "./dist/src/application.mjs"
+    }
+  },
   "engines": {
     "node": "24.x"
   },
   "scripts": {
-    "start": "node index.js",
-    "run": "node index.js",
-    "dev": "node --watch index.js",
+    "start": "node dist/scripts/start.mjs",
+    "run": "node dist/scripts/start.mjs",
+    "dev": "npm run build && node --watch dist/scripts/start.mjs",
     "db:up": "docker compose up -d --wait mysql",
     "db:down": "docker compose down",
     "db:generate": "prisma generate",
     "db:setup": "prisma migrate deploy && prisma generate",
-    "check": "prisma validate && node scripts/check-setup.js",
+    "check": "prisma validate && node dist/scripts/check-setup.mjs",
     "migrate": "prisma migrate dev --name migration && prisma generate",
-    "register": "node createapplicationcommands.js",
-    "test": "node --test",
-    "postinstall": "prisma generate"
+    "register": "node dist/scripts/register.mjs",
+    "test": "tsc -p tsconfig.test.json && node --test dist/test/typed/*.test.mjs",
+    "postinstall": "prisma generate",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint --flag unstable_native_nodejs_ts_config . --max-warnings=0",
+    "build": "tsc -p tsconfig.build.json",
+    "smoke": "node test/production/runtime-replies.mts && node test/production/entrypoints.mts",
+    "verify": "npm run typecheck && npm run lint && npm run build && npm run smoke && npm test",
+    "build:watch": "tsc -p tsconfig.build.json --watch"
   },
   "repository": {
     "type": "git",
@@ -31,17 +43,22 @@
   },
   "homepage": "https://github.com/DevShaded/Bob-Watts#readme",
   "dependencies": {
+    "@prisma/adapter-mariadb": "7.10.0",
     "@prisma/client": "7.10.0",
     "axios": "^1.20.0",
     "discord.js": "^14.27.0",
     "dotenv": "^18.0.7",
     "moment": "^2.31.0",
-    "ms": "^2.1.3",
-    "@prisma/adapter-mariadb": "7.10.0"
+    "ms": "^2.1.3"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.19.2",
+    "eslint": "^10.12.0",
     "pm2": "^7.0.4",
-    "prisma": "7.10.0"
+    "prisma": "7.10.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.2"
   },
   "overrides": {
     "@prisma/adapter-mariadb": {
@@ -57,5 +74,6 @@
       "basic-ftp": "^6.2.3",
       "js-yaml": "^4.3.2"
     }
-  }
+  },
+  "type": "module"
 }
