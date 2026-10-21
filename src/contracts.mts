@@ -74,14 +74,20 @@ export type CommandGuild = Pick<Guild,
     };
 };
 
-export interface CommandContext {
-    readonly commands: readonly CommandMetadata[];
-    readonly getDatabase?: () => SettingsDatabase;
-}
-
 export interface CommandMetadata {
     readonly category: CommandCategory;
     readonly data: { toJSON(): RESTPostAPIChatInputApplicationCommandsJSONBody };
+}
+
+export interface HttpTransport {
+    get(url: string): Promise<unknown>;
+}
+
+export interface CommandContext {
+    readonly commands: readonly CommandMetadata[];
+    readonly getDatabase?: () => SettingsDatabase;
+    readonly http?: HttpTransport;
+    readonly weatherApi?: string | undefined;
 }
 
 export interface Command extends CommandMetadata {

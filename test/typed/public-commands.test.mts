@@ -236,7 +236,7 @@ await test('help remains a valid Discord reply while migration categories are em
     const embed = replyEmbed(interaction);
     assert.ok(embed.fields?.every(field => field.value.length > 0));
     assert.deepEqual(embed.fields?.filter(field => field.value === '\u200b').map(field => field.name), [
-        '🛡️ Moderation', 'ℹ️ Information',
+        '🛡️ Moderation',
     ]);
 });
 
