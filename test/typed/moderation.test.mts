@@ -217,13 +217,14 @@ await test('clean deletes stored target messages and database references before 
     assert.deepEqual(database.writes, []);
 });
 
-await test('infraction listing reports stored warning reasons privately without moderation actions', async () => {
+await test('soft moderators without ManageMessages can list stored infractions privately without moderation actions', async () => {
     const gateway = new OfflineGateway();
     const database = new ModerationStore();
-    database.level = 2;
+    database.level = 3;
     database.records = [{ id: 1, type: 'warning', reason: 'Spam' }, { id: 2, type: 'mute', reason: 'Noise' }];
     await startBot({ env: startupEnvironment, createGateway: () => gateway, createCommandDatabase: () => database });
     const interaction = new ModerationInteraction('infractions');
+    assert.equal(interaction.executor.permissions.has(PermissionFlagsBits.ManageMessages), false);
     await gateway.dispatch(interaction);
     assert.partialDeepStrictEqual(interaction.responses[0]?.payload, { embeds: [{ fields: [{ name: 'Infractions (2)', value: '```warning: Spam``` ```mute: Noise```', inline: false }] }], flags: MessageFlags.Ephemeral });
     assert.deepEqual(database.writes, []);
@@ -449,7 +450,7 @@ await test('all moderation commands preserve Discord permission alternatives and
         ['ban', PermissionFlagsBits.BanMembers, [true, true, false]], ['unban', PermissionFlagsBits.BanMembers, [true, true, false]],
         ['kick', PermissionFlagsBits.KickMembers, [true, true, false]], ['vckick', PermissionFlagsBits.MoveMembers, [true, true, false]],
         ['mute', PermissionFlagsBits.ManageMessages, [true, true, false]], ['unmute', PermissionFlagsBits.ManageMessages, [true, true, false]],
-        ['clean', PermissionFlagsBits.ManageMessages, [true, true, false]], ['infractions', PermissionFlagsBits.ManageMessages, [true, true, false]],
+        ['clean', PermissionFlagsBits.ManageMessages, [true, true, false]], ['infractions', PermissionFlagsBits.ManageMessages, [true, true, true]],
         ['clearinfractions', PermissionFlagsBits.Administrator, [true, false, false]], ['warn', PermissionFlagsBits.ManageMessages, [true, true, true]],
     ];
     for (const [commandName, permission, outcomes] of cases) {

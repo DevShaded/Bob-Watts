@@ -32,7 +32,7 @@ export function userState(): UserState {
 }
 export function memberState(): MemberState {
     return {
-        id: 'user', guild: guildState(), user: userState(), bannable: false,
+        id: 'user', guild: { ...guildState(), roles: { cache: new Map() } }, user: userState(), bannable: false,
         displayColor: 0, displayHexColor: '#000000', displayName: 'Alice',
         joinedTimestamp: null, kickable: false, manageable: false, nickname: null,
         premiumSinceTimestamp: null, roles: { cache: new Map(), add: () => Promise.resolve() },

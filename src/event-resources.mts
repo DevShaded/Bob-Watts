@@ -10,7 +10,7 @@ export type GuildState = Pick<Guild,
     'publicUpdatesChannelId' | 'vanityURLCode' | 'verificationLevel'>;
 export type UserState = Pick<User, 'id' | 'username' | 'discriminator' | 'bot' | 'createdTimestamp' | 'avatarURL' | 'tag' | 'displayAvatarURL'>;
 export type MemberState = Pick<GuildMember, 'id' | 'bannable' | 'displayColor' | 'displayHexColor' | 'displayName' | 'joinedTimestamp' | 'kickable' | 'manageable' | 'nickname' | 'premiumSinceTimestamp'> & {
-    readonly guild: GuildState;
+    readonly guild: GuildState & { readonly roles: { readonly cache: ReadonlyMap<string, { readonly id: string }> } };
     readonly user: UserState;
     readonly roles: {
         readonly cache: ReadonlyMap<string, { readonly id: string }>;

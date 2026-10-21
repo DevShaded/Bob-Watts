@@ -48,7 +48,7 @@ export function createResourceEvents(options: {
             try {
                 await memberLog(member.guild.id, logs?.welcome_log, member.user, logs?.welcome_message || 'Joined the server', 0x28a745);
             } catch (error) { options.reportError(error); }
-            if (logs?.join_role && member.roles.cache.has(logs.join_role)) await member.roles.add(logs.join_role);
+            if (logs?.join_role && member.guild.roles.cache.has(logs.join_role)) await member.roles.add(logs.join_role);
         } },
         { name: 'guildMemberRemove', once: false, async execute(member) {
             if (!member.guild.available) return;
