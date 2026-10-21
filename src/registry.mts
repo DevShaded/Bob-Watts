@@ -1,5 +1,9 @@
+import { setSettings } from './commands/set.mjs';
+import { removeSettings } from './commands/remove.mjs';
+import { addModerator } from './commands/add.mjs';
+import { deleteModerator } from './commands/delete.mjs';
 import { MessageFlags } from 'discord.js';
-import type { Command, RegisteredEvent } from './contracts.mjs';
+import type { Command, CommandContext, RegisteredEvent } from './contracts.mjs';
 import { ping } from './commands/ping.mjs';
 import { coinflip } from './commands/coinflip.mjs';
 import { eightBall } from './commands/8ball.mjs';
@@ -17,9 +21,11 @@ import { userinfo } from './commands/userinfo.mjs';
 export const commands: readonly Command[] = [
     eightBall, coinflip, cookie, diceroll, hug, kiss, rps, slap,
     botinfo, help, ping, userinfo,
+    setSettings, removeSettings, addModerator, deleteModerator,
 ];
 
-export function createEvents({ commandRegistry, reportReady, reportError }: {
+export function createEvents({ commandRegistry, reportReady, reportError, getDatabase }: {
+    getDatabase?: CommandContext['getDatabase'];
     commandRegistry: readonly Command[];
     reportReady: () => void;
     reportError: (error: unknown) => void;
@@ -41,7 +47,7 @@ export function createEvents({ commandRegistry, reportReady, reportError }: {
             if (!command) return;
 
             try {
-                await command.execute(interaction, { commands: commandRegistry });
+                await command.execute(interaction, { commands: commandRegistry, ...(getDatabase ? { getDatabase } : {}) });
             } catch (error) {
                 reportError(error);
                 const response = { content: 'Well that didn\'t work, try another command maybe?' };

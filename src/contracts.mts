@@ -1,9 +1,14 @@
+import type { SettingsDatabase } from './settings-database.mjs';
 import type {
     ClientOptions,
     InteractionEditReplyOptions,
     InteractionReplyOptions,
     RESTPostAPIChatInputApplicationCommandsJSONBody,
     User,
+    Guild,
+    PermissionsBitField,
+    ChannelType,
+    MessageCreateOptions,
     UserFlagsBitField,
 } from 'discord.js';
 
@@ -13,7 +18,8 @@ export const commandCategories: readonly CommandCategory[] = [
     'Fun', 'Moderation', 'Public', 'Settings', 'Information',
 ];
 
-export type CommandUser = Pick<User, 'id' | 'tag' | 'createdTimestamp' | 'displayAvatarURL'> & {
+export type CommandUser = Pick<User, 'id' | 'tag' | 'createdTimestamp' | 'displayAvatarURL' | 'username' | 'discriminator' | 'avatarURL' | 'bot'> & {
+    send(options: MessageCreateOptions): Promise<unknown>;
     readonly flags: Pick<UserFlagsBitField, 'toArray'> | null;
 };
 
@@ -39,18 +45,38 @@ export interface CommandInteraction {
     };
     readonly user: CommandUser;
     readonly options: {
+        getSubcommand(): string;
+        getChannel(name: string): { readonly id: string; readonly type: ChannelType } | null;
+        getRole(name: string): { readonly id: string } | null;
         getString(name: string): string | null;
         getUser(name: string): CommandUser | null;
     };
-    readonly guild: {
-        readonly id: string;
-        readonly members: { readonly cache: ReadonlyMap<string, CommandMember> };
-    } | null;
+    readonly guild: CommandGuild | null;
     readonly deferred: boolean;
     readonly replied: boolean;
     reply(options: InteractionReplyOptions): Promise<unknown>;
     editReply(options: InteractionEditReplyOptions): Promise<unknown>;
     followUp(options: InteractionReplyOptions): Promise<unknown>;
+}
+
+export type CommandGuild = Pick<Guild,
+    'id' | 'name' | 'createdTimestamp' | 'joinedTimestamp' | 'available' | 'large' |
+    'maximumMembers' | 'maximumPresences' | 'memberCount' | 'partnered' |
+    'premiumSubscriptionCount' | 'premiumTier' | 'verified' | 'afkChannelId' |
+    'afkTimeout' | 'bannerURL' | 'defaultMessageNotifications' | 'description' |
+    'explicitContentFilter' | 'iconURL' | 'mfaLevel' | 'nameAcronym' | 'ownerId' |
+    'preferredLocale' | 'rulesChannelId' | 'shardId' | 'splashURL' | 'systemChannelId' |
+    'publicUpdatesChannelId' | 'vanityURLCode' | 'verificationLevel'
+> & {
+    readonly members: {
+        readonly cache: ReadonlyMap<string, CommandMember>;
+        fetch(id: string): Promise<{ readonly permissions: Pick<PermissionsBitField, 'has'> } | null>;
+    };
+};
+
+export interface CommandContext {
+    readonly commands: readonly CommandMetadata[];
+    readonly getDatabase?: () => SettingsDatabase;
 }
 
 export interface CommandMetadata {
@@ -59,9 +85,7 @@ export interface CommandMetadata {
 }
 
 export interface Command extends CommandMetadata {
-    execute(interaction: CommandInteraction, context: {
-        readonly commands: readonly CommandMetadata[];
-    }): Promise<void>;
+    execute(interaction: CommandInteraction, context: CommandContext): Promise<void>;
 }
 
 // Event names match Discord. Non-chat-input interactions carry no command.
