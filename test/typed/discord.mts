@@ -1,8 +1,12 @@
+import type { ReadyClient } from '../../src/event-resources.mjs';
+import { PermissionsBitField, ChannelType, Locale, GuildPremiumTier, GuildDefaultMessageNotifications, GuildExplicitContentFilter, GuildMFALevel, GuildVerificationLevel } from 'discord.js';
 import type { InteractionEditReplyOptions, InteractionReplyOptions } from 'discord.js';
 import type { CommandInteraction, CommandMember, CommandUser, Gateway, RegisteredEvent } from '../../src/contracts.mjs';
 
 export class OfflineGateway implements Gateway {
     readonly events: RegisteredEvent[] = [];
+    getGuildInformation?: NonNullable<Gateway['getGuildInformation']>;
+    sendLog?: NonNullable<Gateway['sendLog']>;
     readonly tokens: string[] = [];
     destroyed = false;
 
@@ -28,11 +32,11 @@ export class OfflineGateway implements Gateway {
         }
     }
 
-    async ready(): Promise<void> {
+    async ready(client?: ReadyClient): Promise<void> {
         for (const event of [...this.events]) {
             if (event.name !== 'clientReady') continue;
             if (event.once) this.events.splice(this.events.indexOf(event), 1);
-            await event.execute();
+            await event.execute(client);
         }
     }
 }
@@ -49,19 +53,35 @@ export class OfflineInteraction implements CommandInteraction {
         guilds: { cache: { size: 1234 } }, users: { cache: { size: 5678 } },
     } satisfies CommandInteraction['client'];
     user: CommandUser = {
+        username: 'Test user', discriminator: '0', bot: false, avatarURL: () => null, send: () => Promise.resolve(),
         id: '123456789012345678', tag: 'Test user',
         createdTimestamp: Date.UTC(2020, 0, 1),
         displayAvatarURL: () => 'https://example.com/avatar.png', flags: null,
     };
     readonly strings = new Map<string, string>();
     selectedUser: CommandUser | null = this.user;
+    subcommand = 'joinchannel';
+    selectedChannel: { id: string; type: ChannelType } | null = { id: 'channel', type: ChannelType.GuildText };
+    selectedRole: { id: string } | null = { id: 'role' };
+    administrator = false;
     options = {
+        getSubcommand: () => this.subcommand,
+        getChannel: () => this.selectedChannel,
+        getRole: () => this.selectedRole,
         getString: (name: string): string | null => this.strings.get(name) ?? null,
         getUser: (): CommandUser | null => this.selectedUser,
     };
     readonly members = new Map<string, CommandMember>();
     guild: CommandInteraction['guild'] = {
-        id: '234567890123456789', members: { cache: this.members },
+        id: '234567890123456789', members: { cache: this.members, fetch: () => Promise.resolve({ permissions: new PermissionsBitField(this.administrator ? ['Administrator'] : []) }) },
+        name: 'Test guild', createdTimestamp: Date.UTC(2020, 0, 1), joinedTimestamp: Date.UTC(2021, 0, 1),
+        available: true, large: false, maximumMembers: 100, maximumPresences: null,
+        memberCount: 10, partnered: false, premiumSubscriptionCount: 0, premiumTier: GuildPremiumTier.None,
+        verified: false, afkChannelId: null, afkTimeout: 60, bannerURL: () => null,
+        defaultMessageNotifications: GuildDefaultMessageNotifications.AllMessages, description: null, explicitContentFilter: GuildExplicitContentFilter.Disabled,
+        iconURL: () => null, mfaLevel: GuildMFALevel.None, nameAcronym: 'TG', ownerId: 'owner',
+        preferredLocale: Locale.EnglishUS, rulesChannelId: null, shardId: 0, splashURL: () => null,
+        systemChannelId: null, publicUpdatesChannelId: null, vanityURLCode: null, verificationLevel: GuildVerificationLevel.None,
     };
     deferred = false;
     replied = false;

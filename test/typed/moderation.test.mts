@@ -1,9 +1,9 @@
-import { ModerationInteraction, ModerationStore } from './moderation-fixtures.mjs';
+import { ModerationGateway as OfflineGateway, ModerationInteraction, ModerationStore } from './moderation-fixtures.mjs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { startBot } from '../../src/application.mjs';
-import { OfflineGateway, OfflineInteraction, startupEnvironment } from './discord.mjs';
+import { OfflineInteraction, startupEnvironment } from './discord.mjs';
 
 await test('moderation dispatch rejects commands outside a guild', async () => {
     const gateway = new OfflineGateway();
@@ -538,4 +538,22 @@ await test('logging failures preserve completed action records and closed DMs do
             assert.partialDeepStrictEqual(interaction.responses[0]?.payload, { embeds: [{ description: 'That user has been warned!' }] });
         }
     }
+});
+
+await test('new moderation users retain account metadata and their actual creation date while unknown join dates remain valid', async () => {
+    const gateway = new OfflineGateway();
+    const database = new ModerationStore();
+    database.level = 2;
+    database.settings = { infractions_log: 'log', mute_role: null };
+    await startBot({ env: startupEnvironment, createGateway: () => gateway, createCommandDatabase: () => database });
+    const interaction = new ModerationInteraction('warn');
+    interaction.target.user.createdTimestamp = new Date(2020, 0, 2, 3, 4, 5).getTime();
+    interaction.target.joinedAt = null;
+    await gateway.dispatch(interaction);
+    assert.deepEqual(database.createdUsers, [{ data: {
+        accountId: '999', username: 'Target', discriminator: '0001', avatar: 'https://example.com/target.png', bot: false,
+        createdTimestamp: '2020-01-02 03-04-05',
+    } }]);
+    assert.partialDeepStrictEqual(interaction.logs[0], { embeds: [{ fields: [{ name: 'Joined At', value: 'Unknown' }] }] });
+    for (const embed of interaction.logs[0]?.embeds ?? []) assert.doesNotThrow(() => new EmbedBuilder(embed).toJSON());
 });

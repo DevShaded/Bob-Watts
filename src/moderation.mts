@@ -12,7 +12,7 @@ export async function executeModeration(interaction: CommandInteraction, context
         await respond(interaction, { content: 'This command can only be used in a server!', flags: MessageFlags.Ephemeral });
         return;
     }
-    if (!guild.members.fetch || !context.database) throw new Error('Moderation dependencies unavailable');
+    if (!context.database) throw new Error('Moderation dependencies unavailable');
     const executor = await guild.members.fetch(interaction.user.id);
     const database = context.database();
     const clear = interaction.commandName === 'clearinfractions';
@@ -25,8 +25,8 @@ export async function executeModeration(interaction: CommandInteraction, context
     const kick = interaction.commandName === 'kick';
     const policy = moderationPolicies.get(interaction.commandName);
     if (!policy) throw new Error(`Unknown moderation command: ${interaction.commandName}`);
-    if (!executor.permissions.has(policy.permission)
-        && !await verifyModeratorLevel(database.moderators, { guildId: guild.id, accountId: interaction.user.id }, policy.level)) {
+    if (!executor || (!executor.permissions.has(policy.permission)
+        && !await verifyModeratorLevel(database.moderators, { guildId: guild.id, accountId: interaction.user.id }, policy.level))) {
         await respond(interaction, {
             content: `You do not have permission to **${policy.permissionName}**, so you can't run this command!`,
             flags: MessageFlags.Ephemeral,
@@ -71,7 +71,11 @@ export async function executeModeration(interaction: CommandInteraction, context
         await respond(interaction, { content: "Sorry! I can't find this user!", flags: MessageFlags.Ephemeral });
         return;
     }
-    const target = await guild.members.fetch(targetUser.id);
+    const target = await context.getModerationMember?.(guild.id, targetUser.id);
+    if (!target) {
+        await respond(interaction, { content: "Sorry! I can't find this user!", flags: MessageFlags.Ephemeral });
+        return;
+    }
     if ((interaction.commandName === 'ban' && (!target.bannable || target.id === interaction.client.user?.id))
         || (kick && (!target.kickable || target.id === interaction.client.user?.id))) {
         await respond(interaction, { embeds: [errorEmbed(interaction, kick ? 'This user is not kickable!' : 'This user is not bannable!')], flags: MessageFlags.Ephemeral });
@@ -137,7 +141,7 @@ export async function executeModeration(interaction: CommandInteraction, context
         }
         await respond(interaction, { embeds: [details], flags: MessageFlags.Ephemeral });
         if (log?.send) {
-            await notify(interaction, context, target, `${String(records.length)} of your infractions in **${guild.name ?? guild.id}** have been removed for the following reason(s): \n\n${reason}`);
+            await notify(interaction, context, target, `${String(records.length)} of your infractions in **${guild.name}** have been removed for the following reason(s): \n\n${reason}`);
         }
         return;
     }
@@ -174,7 +178,7 @@ export async function executeModeration(interaction: CommandInteraction, context
         }
         await respond(interaction, { embeds: [details] });
         if (log?.send) {
-            await notify(interaction, context, target, `${String(deleted)} of your messages in **${guild.name ?? guild.id}** have been deleted for the following reason(s): \n\n${reason}`);
+            await notify(interaction, context, target, `${String(deleted)} of your messages in **${guild.name}** have been deleted for the following reason(s): \n\n${reason}`);
         }
         return;
     }
@@ -202,7 +206,7 @@ export async function executeModeration(interaction: CommandInteraction, context
             schedule(days * 86400000, async () => {
                 try {
                     await target.roles.remove(role);
-                    await notify(interaction, context, target, `Your mute cool down is finished in **${guild.name ?? guild.id}**`);
+                    await notify(interaction, context, target, `Your mute cool down is finished in **${guild.name}**`);
                 } catch (error) { context.reportError?.(error); }
             });
         }
@@ -218,7 +222,7 @@ export async function executeModeration(interaction: CommandInteraction, context
     });
     if (mute || unmute || (logId && (warn || voiceKick))) {
         const action = voiceKick ? 'kicked from the voice channel' : unmute ? 'unmuted' : mute ? 'muted' : 'warned';
-        await notify(interaction, context, target, `You have been ${action} in **${guild.name ?? guild.id}** for the following reason(s): \n\n${reason}`);
+        await notify(interaction, context, target, `You have been ${action} in **${guild.name}** for the following reason(s): \n\n${reason}`);
     }
 }
 

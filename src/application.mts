@@ -1,21 +1,30 @@
-import { createDatabase } from './database.mjs';
 import type { ModerationDatabase, ModerationSchedule } from './moderation-contracts.mjs';
+import { createPersistence } from './persistence.mjs';
+import type { Persistence } from './persistence.mjs';
+import { createDatabase } from './database.mjs';
+import type { SettingsDatabase } from './settings-database.mjs';
 import { GatewayIntentBits, Partials, REST, Routes } from 'discord.js';
 import { readRegistrationConfig, readStartupConfig } from './configuration.mjs';
 import type { DatabaseConfig, Environment } from './configuration.mjs';
-import type { Command, Gateway, GatewayFactory, RestFactory } from './contracts.mjs';
+import type { Command, HttpTransport, Gateway, GatewayFactory, RestFactory } from './contracts.mjs';
 import { createDiscordGateway } from './discord.mjs';
 import { commands, createEvents } from './registry.mjs';
 
 export async function startBot({
+    database,
     env = process.env,
     createGateway = createDiscordGateway,
-    createCommandDatabase = createDatabase,
+    createCommandDatabase,
     schedule,
     commandRegistry = commands,
+    http,
+    persistence,
     reportError = console.error,
     reportReady = () => { console.log('Bot has successfully signed in and is listening to events'); },
 }: {
+    database?: SettingsDatabase;
+    http?: HttpTransport;
+    persistence?: Persistence;
     env?: Environment;
     createGateway?: GatewayFactory;
     createCommandDatabase?: (config: DatabaseConfig) => ModerationDatabase;
@@ -39,23 +48,41 @@ export async function startBot({
         partials: [Partials.Message, Partials.Channel, Partials.Reaction],
         allowedMentions: { parse: ['users', 'roles'], repliedUser: true },
     });
-    let database: ModerationDatabase | undefined;
+    let ownedDatabase: ReturnType<typeof createDatabase> | undefined;
+    const getOwnedDatabase = (): ReturnType<typeof createDatabase> => ownedDatabase ??= createDatabase(config);
+    let moderationDatabase: ModerationDatabase | undefined;
+    const getModerationDatabase = (): ModerationDatabase => {
+        moderationDatabase ??= createCommandDatabase ? createCommandDatabase(config) : getOwnedDatabase();
+        return moderationDatabase;
+    };
     const destroyGateway = gateway.destroy.bind(gateway);
     gateway.destroy = async () => {
         try {
             await destroyGateway();
         } finally {
-            const activeDatabase = database;
-            database = undefined;
-            await activeDatabase?.$disconnect?.();
+            const activeDatabase = ownedDatabase;
+            const activeModerationDatabase = moderationDatabase;
+            ownedDatabase = undefined;
+            moderationDatabase = undefined;
+            try {
+                await activeDatabase?.$disconnect();
+            } finally {
+                if (activeModerationDatabase !== activeDatabase) await activeModerationDatabase?.$disconnect?.();
+            }
         }
     };
     const context = {
-        database: (): ModerationDatabase => { database ??= createCommandDatabase(config); return database; },
-        reportError,
+        database: getModerationDatabase, reportError,
+        ...(gateway.getModerationMember ? { getModerationMember: gateway.getModerationMember } : {}),
         ...(schedule ? { schedule } : {}),
     };
-    for (const event of createEvents({ commandRegistry, reportReady, reportError, context })) {
+    for (const event of createEvents({
+        commandRegistry, reportReady, reportError, context, http, weatherApi: config.weatherApi,
+        getDatabase: () => database ?? getOwnedDatabase(),
+        persistence: persistence ?? createPersistence(getOwnedDatabase),
+        sendLog: gateway.sendLog, getGuildInformation: gateway.getGuildInformation,
+        logGuildId: config.guildId, logChannelId: config.channelId,
+    })) {
         gateway.subscribe(event, reportError);
     }
     try {

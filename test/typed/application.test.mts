@@ -6,6 +6,8 @@ import type { RESTPostAPIChatInputApplicationCommandsJSONBody } from 'discord.js
 import { registerCommands, startBot } from '../../src/application.mjs';
 import type { RegistrationTransport } from '../../src/contracts.mjs';
 import { OfflineGateway, OfflineInteraction, startupEnvironment } from './discord.mjs';
+import { settingsDefinitions } from './fixtures/settings-definitions.mjs';
+import { informationDefinitions } from './fixtures/information-definitions.mjs';
 import { publicDefinitions } from './fixtures/public-definitions.mjs';
 
 await test('typed registration repeatedly sends all migrated definitions to guild and global API v10 routes', async () => {
@@ -35,14 +37,16 @@ await test('typed registration repeatedly sends all migrated definitions to guil
     for (const request of requests) {
         const names = request.body.map(definition => definition.name);
         assert.deepEqual(names.slice().sort(), [
-            '8ball', 'ban', 'botinfo', 'clean', 'clearinfractions', 'coinflip', 'cookie', 'diceroll',
-            'help', 'hug', 'infractions', 'kick', 'kiss', 'mute', 'ping', 'rps', 'slap',
-            'unban', 'unmute', 'userinfo', 'vckick', 'warn',
+            '8ball', 'add', 'ban', 'botinfo', 'clean', 'clearinfractions', 'coinflip', 'cookie',
+            'delete', 'diceroll', 'help', 'hug', 'infractions', 'kick', 'kiss', 'mute', 'ping',
+            'randomcat', 'randomdog', 'remove', 'rps', 'serverinfo', 'set', 'slap',
+            'unban', 'unmute', 'userinfo', 'vckick', 'warn', 'weather',
         ]);
-        assert.equal(new Set(names).size, 22);
+        assert.equal(new Set(names).size, 30);
         // Discord omits undefined optional fields when sending JSON.
         const serialized: unknown = JSON.parse(JSON.stringify(request.body.slice().sort((a, b) => a.name.localeCompare(b.name))));
-        assert.deepEqual(serialized, [...publicDefinitions, ...moderationDefinitions].sort((a, b) => a.name.localeCompare(b.name)));
+        assert.deepEqual(serialized, [...publicDefinitions, ...informationDefinitions, ...settingsDefinitions, ...moderationDefinitions].sort((a, b) => a.name.localeCompare(b.name)));
+
     }
 });
 
@@ -168,7 +172,7 @@ await test('entrypoints validate only their required configuration before constr
         createRest: unexpected,
     }), /Missing .env values: APP_GUILD_ID/);
 
-    for (const key of ['APP_TOKEN', 'DATABASE_URL', 'APP_GUILD_ID', 'APP_CHANNEL_ID']) {
+    for (const key of ['APP_TOKEN', 'DATABASE_URL']) {
         await assert.rejects(startBot({
             env: { ...startupEnvironment, [key]: ' ' }, createGateway: unexpected,
         }), new RegExp(`Missing .env values: ${key}`));

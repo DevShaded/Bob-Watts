@@ -1,5 +1,13 @@
-import { MessageFlags } from 'discord.js';
-import type { Command, CommandContext, RegisteredEvent } from './contracts.mjs';
+import { serverinfo } from './commands/serverinfo.mjs';
+import { createResourceEvents } from './events.mjs';
+import type { SendLog, GetGuildInformation } from './event-resources.mjs';
+import type { Persistence } from './persistence.mjs';
+import { setSettings } from './commands/set.mjs';
+import { removeSettings } from './commands/remove.mjs';
+import { addModerator } from './commands/add.mjs';
+import { deleteModerator } from './commands/delete.mjs';
+import { ActivityType, MessageFlags } from 'discord.js';
+import type { Command, CommandContext, HttpTransport, RegisteredEvent } from './contracts.mjs';
 import { ping } from './commands/ping.mjs';
 import { coinflip } from './commands/coinflip.mjs';
 import { eightBall } from './commands/8ball.mjs';
@@ -22,26 +30,52 @@ import { infractions } from './commands/infractions.mjs';
 import { clearinfractions } from './commands/clearinfractions.mjs';
 import { ban } from './commands/ban.mjs';
 import { userinfo } from './commands/userinfo.mjs';
+import { randomdog } from './commands/randomdog.mjs';
+import { weather } from './commands/weather.mjs';
+import { randomcat } from './commands/randomcat.mjs';
 
 // Migration checkpoint: remaining commands join this explicit registry in #30–33.
 export const commands: readonly Command[] = [
     eightBall, coinflip, cookie, diceroll, hug, kiss, rps, slap,
-    botinfo, help, ping, userinfo, ban, clearinfractions, infractions, clean, vckick, unmute, mute, warn, unban, kick,
+    botinfo, help, ping, userinfo, serverinfo,
+    ban, clean, clearinfractions, infractions, kick, mute, unban, unmute, vckick, warn,
+    randomcat, randomdog, weather,
+    setSettings, removeSettings, addModerator, deleteModerator,
 ];
 
-export function createEvents({ commandRegistry, reportReady, reportError, context = {} }: {
+export function createEvents({ commandRegistry, reportReady, reportError, http, weatherApi, persistence, sendLog, logGuildId, logChannelId, getGuildInformation, getDatabase, context = {} }: {
+    persistence: Persistence;
+    getGuildInformation?: GetGuildInformation | undefined;
+    sendLog?: SendLog | undefined;
+    logGuildId?: string | undefined;
+    logChannelId?: string | undefined;
+    getDatabase?: CommandContext['getDatabase'];
+    http?: HttpTransport | undefined;
+    weatherApi?: string | undefined;
     commandRegistry: readonly Command[];
     context?: Omit<CommandContext, 'commands'>;
     reportReady: () => void;
     reportError: (error: unknown) => void;
 }): readonly RegisteredEvent[] {
+    let username = 'Bob Watts';
     const byName = new Map(commandRegistry.map(command => [command.data.toJSON().name, command]));
-    return [{
+    return [...createResourceEvents({ persistence, sendLog, logGuildId, logChannelId, reportError, username: () => username }), {
         name: 'clientReady',
         once: true,
-        execute: () => {
+        async execute(client) {
             reportReady();
-            return Promise.resolve();
+            if (!client) return;
+            username = client.username;
+            const activity = await persistence.activity();
+            const types: Readonly<Record<string, ActivityType>> = {
+                PLAYING: ActivityType.Playing, STREAMING: ActivityType.Streaming,
+                LISTENING: ActivityType.Listening, WATCHING: ActivityType.Watching,
+                CUSTOM: ActivityType.Custom, COMPETING: ActivityType.Competing,
+            };
+            client.setActivity(activity?.name ?? 'devshaded.com/bobwatts', {
+                type: activity ? types[activity.type] ?? ActivityType.Playing : ActivityType.Watching,
+                ...(activity?.url ? { url: activity.url } : {}),
+            });
         },
     }, {
         name: 'interactionCreate',
@@ -52,7 +86,11 @@ export function createEvents({ commandRegistry, reportReady, reportError, contex
             if (!command) return;
 
             try {
-                await command.execute(interaction, { ...context, commands: commandRegistry });
+                await command.execute(interaction, {
+                    ...context, commands: commandRegistry, persistence, getGuildInformation,
+                    ...(getDatabase ? { getDatabase } : {}),
+                    ...(http ? { http } : {}), weatherApi,
+                });
             } catch (error) {
                 reportError(error);
                 const response = { content: 'Well that didn\'t work, try another command maybe?' };

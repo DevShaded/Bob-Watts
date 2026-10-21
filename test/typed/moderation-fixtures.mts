@@ -1,6 +1,7 @@
 import { PermissionsBitField } from 'discord.js';
 import type { ModerationDatabase, ModerationMember, InfractionRecord, InfractionWrite } from '../../src/moderation-contracts.mjs';
-import { OfflineInteraction } from './discord.mjs';
+import type { CommandInteraction } from '../../src/contracts.mjs';
+import { OfflineGateway, OfflineInteraction } from './discord.mjs';
 
 export class ModerationStore implements ModerationDatabase {
     disconnects = 0;
@@ -100,6 +101,9 @@ export class ModerationInteraction extends OfflineInteraction {
         send?: (options: Parameters<ModerationMember['send']>[0]) => Promise<unknown>;
     }>();
     override options = {
+        getSubcommand: () => this.subcommand,
+        getChannel: () => this.selectedChannel,
+        getRole: () => this.selectedRole,
         getString: (name: string): string | null => this.strings.get(name) ?? null,
         getUser: () => this.selectedUser,
         getInteger: (name: string): number | null => this.integers.get(name) ?? null,
@@ -113,7 +117,10 @@ export class ModerationInteraction extends OfflineInteraction {
         this.commandName = commandName;
         this.selectedUser = this.target.user;
         this.executor.id = this.user.id;
+        const guild = this.guild;
+        if (!guild) throw new Error('The moderation fixture requires a guild');
         this.guild = {
+            ...guild,
             id: 'guild', name: 'Test server',
             members: {
                 cache: this.members,
@@ -125,4 +132,20 @@ export class ModerationInteraction extends OfflineInteraction {
         this.channels.set('log', { id: 'log', send: options => { if (this.logFailure) return Promise.reject(this.logFailure); this.logs.push(options); return Promise.resolve(); } });
     }
     deferReply(): Promise<void> { this.deferred = true; return Promise.resolve(); }
+}
+
+export class ModerationGateway extends OfflineGateway {
+    private target: ModerationMember | null = null;
+    private memberFailure: Error | undefined;
+    getModerationMember = (_guildId: string, userId: string): Promise<ModerationMember | null> => {
+        if (this.memberFailure) return Promise.reject(this.memberFailure);
+        return Promise.resolve(this.target?.id === userId ? this.target : null);
+    };
+    override async dispatch(interaction: CommandInteraction | null): Promise<void> {
+        if (interaction instanceof ModerationInteraction) {
+            this.target = interaction.target;
+            this.memberFailure = interaction.memberFailure;
+        }
+        await super.dispatch(interaction);
+    }
 }
