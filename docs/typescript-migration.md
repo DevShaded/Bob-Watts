@@ -1,6 +1,6 @@
 # TypeScript migration plan
 
-Status: specified in [GitHub issue #26](https://github.com/DevShaded/Bob-Watts/issues/26), including confirmed testing boundaries. Implementation is in progress; the complete conversion still requires the remaining checkpoints and final integration.
+Status: specified in [GitHub issue #26](https://github.com/DevShaded/Bob-Watts/issues/26), including confirmed testing boundaries. Complete conversion implemented through checkpoints #27–34. The final integration replaces all maintained JavaScript application, script, and test paths with strictly checked TypeScript and compiled ESM production entrypoints.
 
 The [architecture decision](adr/0001-typescript-migration.md) records the agreed scope and trade-offs.
 
@@ -41,7 +41,7 @@ The [architecture decision](adr/0001-typescript-migration.md) records the agreed
 
 ## Information commands checkpoint (#30)
 
-The typed registry now includes `randomcat`, `randomdog`, and `weather`. Their legacy JavaScript implementations remain for comparison until #34.
+The typed registry now includes `randomcat`, `randomdog`, and `weather`. Their JavaScript predecessors were removed during final integration.
 
 HTTP transport is a narrow `get(url): Promise<unknown>` dependency, optionally supplied to `startBot` and exposed through command context. Commands validate every consumed response field before building Discord payloads. Weather receives the optional `APP_WEATHER_API` setting through startup configuration; absent or blank credentials produce a private unavailable reply without an HTTP request.
 
@@ -56,7 +56,7 @@ Valid embeds, image link buttons, weather rounding, slash definitions, and help 
 
 ## Settings commands checkpoint (#31)
 
-The typed registry includes `set`, `remove`, `add`, and `delete`, with serialized definitions checked against their legacy counterparts. Legacy `Commands` and `App` implementations remain until #34.
+The typed registry includes `set`, `remove`, `add`, and `delete`, with serialized definitions checked against their legacy counterparts. Final integration removed the obsolete `Commands` and `App` implementations.
 
 Settings use the shared moderator-level verifier: Discord administrators and stored level 1 administrators can manage settings and moderator levels. Existing level values, targeted deletion, private responses, target DMs, guild/user initialization, nested guild settings, timestamp formats, and historical enum strings remain compatible.
 
@@ -73,7 +73,7 @@ Offline tests cover authorization across all four commands, every setting's crea
 
 ## Moderation commands checkpoint (#32)
 
-All ten Moderation commands are registered as strict TypeScript definitions, with every option checked against captured legacy serialization. `Commands` and `App` remain unchanged for comparison until #34. Discord permission alternatives, stored moderator levels, bot self-protections, infraction type strings, zero-day ban history, notifications, and configured logging remain covered through startup/dispatch.
+All ten Moderation commands are registered as strict TypeScript definitions, with every option checked against captured legacy serialization. Independent expected registration payloads preserve the established definitions after removal of `Commands` and `App`. Discord permission alternatives, stored moderator levels, bot self-protections, infraction type strings, zero-day ban history, notifications, and configured logging remain covered through startup/dispatch.
 
 Command context exposes a narrow moderation database provider, member resolver, scheduler, and error reporter. Production resolves real guild members through the Discord gateway and shares the owned Prisma client with settings and event persistence. Tests supply those external capabilities without pretending permission-only members are full Discord members. The database opens lazily and closes when the gateway shuts down.
 
@@ -93,7 +93,7 @@ Timed mutes retain the existing in-memory scheduling model; restarting the proce
 
 ## Guild, member, and message checkpoint (#33)
 
-The typed application registers all seven existing guild/member events, plus message delivery, client readiness, and interaction dispatch. Readiness remains one-time; the other events repeat. `/serverinfo` joins the shared Public command registry. Legacy JavaScript remains until #34.
+The typed application registers all seven existing guild/member events, plus message delivery, client readiness, and interaction dispatch. Readiness remains one-time; the other events repeat. `/serverinfo` joins the shared Public command registry. Final integration removed the legacy JavaScript path.
 
 `startBot` accepts a narrow `Persistence` capability for event writes, stored guild information, logging settings, and the latest bot activity. Command context exposes that capability as `persistence`. The Discord gateway provides `sendLog` and `getGuildInformation`; their contracts describe only sendable-channel operations and the guild, presence count, and role IDs needed by this slice. Event resources use narrow structural types, including nullable users on partial member removals. Tests supply those declared capabilities rather than incomplete Discord instances. Production settings commands and event persistence share one lazily created Prisma client.
 
@@ -107,3 +107,75 @@ Behavior corrections covered through startup event delivery or command dispatch:
 - `/serverinfo` handles absent guilds and settings with a private unavailable response, reloads initialized settings, supplies emoji fallbacks, and produces a valid role field when only the everyone role exists.
 
 The existing unique guild constraint on `ThreadChannels` and global member/account uniqueness on `GuildMembers` remain schema limitations. This checkpoint does not change those constraints or discard existing rows to bypass them. No live Discord or production-database verification is required by the offline checks.
+
+## Final production workflow (#34)
+
+All 30 definitions now flow through the same registry for startup, registration,
+setup validation, and help. Tests assert the exact command-name set, uniqueness,
+category membership through help, and complete expected registration payloads.
+Temporary category substitutes, legacy module discovery, CommonJS cache scaffolding,
+and direct compatibility-helper tests have been removed. Independent expected
+Discord payloads remain as literal assertions in `test/typed/command-payloads.mts`.
+Moderator hierarchy assertions now run through actual command dispatch, including
+historical stored values 0 and 4.
+
+The baseline test behaviors remain covered through the approved application seams:
+
+- Command serialization, numeric embed colors, valid timestamps/buttons, user badges,
+  and HTTP results: application registration and command dispatch tests.
+- Private moderation/settings denials, zero/one/seven-day ban history with optional
+  logging, and historical guild/channel enum writes: command dispatch and startup
+  event-delivery tests with narrow external database collaborators.
+- Startup intents, partials, mentions, event wiring, one-time/default activity,
+  repeated startup, ignored interactions/messages, and response lifecycle errors:
+  startup/dispatch tests plus the compiled CLI SDK substitute.
+- Repeated guild/global API v10 registration and configuration/request failures:
+  registration tests and compiled process checks.
+- Import safety, CLI success/failure, and package-version resolution: compiled
+  entrypoint and resource checks outside the repository working directory.
+
+Production CLIs are `dist/scripts/start.mjs`, `register.mjs`, and `check-setup.mjs`.
+They load `.env` only when executed. `npm run dev` builds and watches compiled output with Node 24;
+`npm run build:watch` recompiles source edits in a second terminal; production uses emitted ESM without a TypeScript runtime loader.
+The PM2 configuration is data-only JSON. PM2 imports ESM via its own wrapper,
+so the CLI main check also recognizes PM2's `pm_exec_path`; comparing only
+`process.argv[1]` left the process running without invoking startup. The production
+smoke harness covers this behavior with an actual isolated PM2 daemon and an
+external Discord SDK substitute.
+
+Setup validates the shared definitions, constructs the ten event definitions,
+connects to the database, queries every model, and disconnects in `finally`.
+Its exhaustive typed model-probe map fails compilation when a schema model lacks
+a probe. Database configuration is required; Discord settings are reported without
+authentication, and `APP_ENV` is unnecessary. Connection and query failures cannot
+report setup success. Prisma configuration is typed and omits the datasource URL
+when unavailable, allowing installation and generation before `.env` exists.
+
+`npm run verify` runs full typechecking, type-aware lint, production build, offline
+production smoke checks, and the compiled TypeScript tests. CI installs and generates
+without `.env` and explicitly requires absent production output before building;
+production smoke checks run before test compilation. All maintained source, scripts,
+tests, and both TypeScript tool configurations participate in strict checks, with
+no unsafe assertions, non-null assertions, `any`, suppressions, or inline lint-rule
+disabling. ESLint's native Node TypeScript config flag supports the typed config.
+
+No live Discord registration, deployment, or production database verification is
+part of this conversion. PM2 smoke checks use a temporary daemon home and always
+kill that daemon. Setup success tests use a controlled database collaborator;
+operators run `npm run db:setup` and `npm run check` against their configured database.
+
+## Fun and public command corrections (#29)
+
+The eight Fun commands and `/help`, `/botinfo`, `/ping`, and `/userinfo` retain
+their established slash definitions and valid Discord payloads. Dispatch
+regressions preserve these verified corrections:
+
+- Unresolved slap targets receive the same private response as hug and kiss.
+- User information privately reports missing guilds or uncached members. Missing
+  join dates display `Unknown`; everyone roles are excluded by ID rather than cache order.
+- Bot information falls back to a crown when its founder emoji is absent; badges
+  fall back to their flag names when custom emojis are unavailable.
+- Malformed required fortune/game input reaches the application failure response
+  instead of embedding `null` or `undefined` in a success reply.
+- Ping uses numeric colors and reports unavailable gateway latency until a finite,
+  nonnegative measurement exists.

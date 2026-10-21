@@ -1,10 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { EmbedBuilder, MessageFlags, PermissionFlagsBits, SlashCommandBuilder, UserFlagsBitField } from 'discord.js';
+import { EmbedBuilder, MessageFlags, UserFlagsBitField } from 'discord.js';
 import type { APIEmbed } from 'discord.js';
 import { registerCommands, startBot } from '../../src/application.mjs';
-import type { Command, CommandCategory } from '../../src/contracts.mjs';
-import { commands } from '../../src/registry.mjs';
 import { OfflineGateway, OfflineInteraction, startupEnvironment } from './discord.mjs';
 
 function replyEmbed(interaction: OfflineInteraction): APIEmbed {
@@ -175,32 +173,16 @@ await test('bot information preserves statistics, version and support links with
 });
 
 await test('help displays shared registry names in category order regardless of permissions or optional settings', async () => {
-    const remainingCategories: [CommandCategory, string[]][] = [
-        ['Moderation', ['ban', 'clean', 'clearinfractions', 'infractions', 'kick', 'mute', 'unban', 'unmute', 'vckick', 'warn']],
-        ['Settings', ['add', 'delete', 'remove', 'set']],
-        ['Information', ['randomcat', 'randomdog', 'weather']],
-        ['Public', ['botinfo', 'serverinfo', 'userinfo']],
-    ];
-    const productionNames = new Set(commands.map(command => command.data.toJSON().name));
-    const metadataFixtures: Command[] = remainingCategories.flatMap(([category, names]) => names
-        .filter(name => !productionNames.has(name)).map(name => ({
-        category,
-        data: new SlashCommandBuilder().setName(name).setDescription('Representative category metadata')
-            .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
-        execute: () => Promise.reject(new Error('Metadata fixtures must not execute')),
-        })));
-    const commandRegistry = [...commands, ...metadataFixtures];
     const registeredNames: string[] = [];
     await registerCommands({
         env: { APP_ENV: 'production', APP_TOKEN: 'offline', APP_CLIENT_ID: '123' },
-        commandRegistry,
         createRest: () => ({ put: (_route, options) => {
             registeredNames.push(...options.body.map(definition => definition.name));
             return Promise.resolve();
         } }),
     });
     const gateway = new OfflineGateway();
-    await startBot({ env: startupEnvironment, createGateway: () => gateway, commandRegistry });
+    await startBot({ env: startupEnvironment, createGateway: () => gateway });
     const interaction = new OfflineInteraction();
     interaction.commandName = 'help';
     interaction.guild = null;

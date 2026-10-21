@@ -1,4 +1,4 @@
-name: Offline tests
+name: TypeScript verification
 
 on: [push, pull_request]
 
@@ -6,8 +6,8 @@ permissions:
     contents: read
 
 jobs:
-    test:
-        name: Offline tests
+    verify:
+        name: Typecheck, lint, build, smoke, and offline tests
         runs-on: ubuntu-latest
         timeout-minutes: 10
         steps:
@@ -16,15 +16,20 @@ jobs:
               with:
                   node-version-file: .nvmrc
                   cache: npm
-            - name: Install dependencies and generate Prisma Client
-              run: npm ci
-            - name: Build migrated production TypeScript from clean output
+            - name: Install without credentials and generate Prisma Client
+              run: |
+                  test ! -e .env
+                  npm ci
+                  npm run db:generate
+            - name: Check every maintained TypeScript source, config, and test
+              run: npm run typecheck
+            - name: Type-aware lint
+              run: npm run lint
+            - name: Compile production from clean output
               run: |
                   test ! -e dist
-                  npm run build:typed
-            - name: Smoke-test production resources before compiling tests
-              run: npm run smoke:typed
-            - name: Lint migrated TypeScript sources and tests
-              run: npm run lint:typed
-            - name: Run offline tests
+                  npm run build
+            - name: Verify compiled Node and PM2 launches and runtime resources before test compilation
+              run: npm run smoke
+            - name: Compile and run offline tests
               run: npm test

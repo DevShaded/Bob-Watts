@@ -201,7 +201,7 @@ await test('failed settings writes report the operation failure privately withou
 await test('all settings commands preserve Discord and stored administrator authorization', async () => {
     for (const commandName of ['set', 'remove', 'add', 'delete']) {
         for (const administrator of [false, true]) {
-            for (const storedLevel of [undefined, 1, 2, 3]) {
+            for (const storedLevel of [undefined, 0, 1, 2, 3, 4]) {
                 const database = new OfflineSettingsDatabase();
                 database.log = { ...emptyLog(), welcome_log: 'old' };
                 if (storedLevel !== undefined) database.levels.set('234567890123456789:123456789012345678', storedLevel);
@@ -214,7 +214,7 @@ await test('all settings commands preserve Discord and stored administrator auth
                 if (commandName === 'add' || commandName === 'delete') interaction.subcommand = 'moderator';
                 interaction.selectedUser = { ...interaction.user, id: 'target' };
                 await gateway.dispatch(interaction);
-                const allowed = administrator || storedLevel === 1;
+                const allowed = administrator || (storedLevel !== undefined && storedLevel <= 1);
                 assert.equal(database.logWrites.length + database.moderatorWrites.length + database.moderatorDeletes.length > 0, allowed,
                     `${commandName}: Discord administrator ${String(administrator)}, stored level ${String(storedLevel)}`);
                 assert.partialDeepStrictEqual(interaction.responses, [{ payload: { flags: MessageFlags.Ephemeral } }]);

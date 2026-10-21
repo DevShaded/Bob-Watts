@@ -2,7 +2,7 @@
   "name": "bob-watts",
   "version": "3.0.0",
   "description": "A multi purpose bot including fun and epic commands",
-  "main": "index.js",
+  "main": "dist/src/application.mjs",
   "imports": {
     "#compiled-application": {
       "types": "./src/application.mts",
@@ -13,24 +13,24 @@
     "node": "24.x"
   },
   "scripts": {
-    "start": "node index.js",
-    "run": "node index.js",
-    "dev": "node --watch index.js",
+    "start": "node dist/scripts/start.mjs",
+    "run": "node dist/scripts/start.mjs",
+    "dev": "npm run build && node --watch dist/scripts/start.mjs",
     "db:up": "docker compose up -d --wait mysql",
     "db:down": "docker compose down",
     "db:generate": "prisma generate",
     "db:setup": "prisma migrate deploy && prisma generate",
-    "check": "prisma validate && node scripts/check-setup.js",
+    "check": "prisma validate && node dist/scripts/check-setup.mjs",
     "migrate": "prisma migrate dev --name migration && prisma generate",
-    "register": "node createapplicationcommands.js",
-    "typecheck:typed": "tsc -p tsconfig.json",
-    "lint:typed": "eslint src test/typed test/production --max-warnings=0",
-    "build:typed": "tsc -p tsconfig.build.json",
-    "smoke:typed": "node test/production/runtime-replies.mts",
-    "test:typed": "tsc -p tsconfig.test.json && node --test dist/test/typed/*.test.mjs",
-    "test:legacy": "node --test test/*.test.js",
-    "test": "npm run test:legacy && npm run test:typed",
-    "postinstall": "prisma generate"
+    "register": "node dist/scripts/register.mjs",
+    "test": "tsc -p tsconfig.test.json && node --test dist/test/typed/*.test.mjs",
+    "postinstall": "prisma generate",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint --flag unstable_native_nodejs_ts_config . --max-warnings=0",
+    "build": "tsc -p tsconfig.build.json",
+    "smoke": "node test/production/runtime-replies.mts && node test/production/entrypoints.mts",
+    "verify": "npm run typecheck && npm run lint && npm run build && npm run smoke && npm test",
+    "build:watch": "tsc -p tsconfig.build.json --watch"
   },
   "repository": {
     "type": "git",
@@ -74,5 +74,6 @@
       "basic-ftp": "^6.2.3",
       "js-yaml": "^4.3.2"
     }
-  }
+  },
+  "type": "module"
 }

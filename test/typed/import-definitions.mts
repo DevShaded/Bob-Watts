@@ -11,3 +11,7 @@ await import('../../src/application.mjs');
 await import('../../src/database.mjs');
 await import('../../src/database-enums.mjs');
 await import('../../src/moderator-level.mjs');
+
+await import('../../scripts/start.mjs');
+await import('../../scripts/register.mjs');
+await import('../../scripts/check-setup.mjs');

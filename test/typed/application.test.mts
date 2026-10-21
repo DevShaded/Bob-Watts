@@ -1,4 +1,4 @@
-import { moderationDefinitions } from './fixtures/moderation-definitions.mjs';
+import { expectedCommandPayloads } from './command-payloads.mjs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { IntentsBitField, MessageFlags, Partials } from 'discord.js';
@@ -6,9 +6,6 @@ import type { RESTPostAPIChatInputApplicationCommandsJSONBody } from 'discord.js
 import { registerCommands, startBot } from '../../src/application.mjs';
 import type { RegistrationTransport } from '../../src/contracts.mjs';
 import { OfflineGateway, OfflineInteraction, startupEnvironment } from './discord.mjs';
-import { settingsDefinitions } from './fixtures/settings-definitions.mjs';
-import { informationDefinitions } from './fixtures/information-definitions.mjs';
-import { publicDefinitions } from './fixtures/public-definitions.mjs';
 
 await test('typed registration repeatedly sends all migrated definitions to guild and global API v10 routes', async () => {
     const requests: { route: string; body: readonly RESTPostAPIChatInputApplicationCommandsJSONBody[] }[] = [];
@@ -45,7 +42,7 @@ await test('typed registration repeatedly sends all migrated definitions to guil
         assert.equal(new Set(names).size, 30);
         // Discord omits undefined optional fields when sending JSON.
         const serialized: unknown = JSON.parse(JSON.stringify(request.body.slice().sort((a, b) => a.name.localeCompare(b.name))));
-        assert.deepEqual(serialized, [...publicDefinitions, ...informationDefinitions, ...settingsDefinitions, ...moderationDefinitions].sort((a, b) => a.name.localeCompare(b.name)));
+        assert.deepEqual(serialized, [...expectedCommandPayloads].sort((a, b) => a.name.localeCompare(b.name)));
 
     }
 });
