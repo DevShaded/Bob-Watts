@@ -483,11 +483,10 @@ await test('startup creates one moderation database lazily and disconnects it wh
     const database = new ModerationStore();
     database.level = 2;
     let opened = 0;
-    let closed = 0;
     const bot = await startBot({ env: startupEnvironment, createGateway: () => gateway,
         createCommandDatabase: () => {
             opened++;
-            return { ...database, $disconnect: () => { closed++; return Promise.resolve(); } };
+            return database;
         },
     });
     assert.equal(opened, 0);
@@ -495,7 +494,7 @@ await test('startup creates one moderation database lazily and disconnects it wh
     await gateway.dispatch(new ModerationInteraction('warn'));
     assert.equal(opened, 1);
     await bot.destroy();
-    assert.equal(closed, 1);
+    assert.equal(database.disconnects, 1);
     assert.equal(gateway.destroyed, true);
 });
 

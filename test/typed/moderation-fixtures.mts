@@ -3,6 +3,8 @@ import type { ModerationDatabase, ModerationMember, InfractionRecord, Infraction
 import { OfflineInteraction } from './discord.mjs';
 
 export class ModerationStore implements ModerationDatabase {
+    disconnects = 0;
+    $disconnect(): Promise<void> { this.disconnects++; return Promise.resolve(); }
     level: number | null = null;
     settings: { infractions_log: string | null; mute_role: string | null } | null = null;
     storedUser: Awaited<ReturnType<ModerationDatabase['users']['findUnique']>> = null;
