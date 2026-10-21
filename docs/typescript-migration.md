@@ -1,6 +1,6 @@
 # TypeScript migration plan
 
-Status: specified in [GitHub issue #26](https://github.com/DevShaded/Bob-Watts/issues/26), including confirmed testing boundaries. Implementation has not started.
+Status: specified in [GitHub issue #26](https://github.com/DevShaded/Bob-Watts/issues/26), including confirmed testing boundaries. Implementation is in progress; the complete conversion still requires the remaining checkpoints and final integration.
 
 The [architecture decision](adr/0001-typescript-migration.md) records the agreed scope and trade-offs.
 
@@ -37,3 +37,19 @@ The [architecture decision](adr/0001-typescript-migration.md) records the agreed
 - Registry checks cover all 30 existing commands, category metadata, registration payloads, and dispatch contracts.
 - Focused tests cover malformed external data, errors without HTTP responses, optional configuration, and each additional bug fixed during conversion.
 - Built entrypoints and configuration are exercised without contacting Discord or changing a production database. Live bot verification, if needed, is a separate operational step.
+
+
+## Information commands checkpoint (#30)
+
+The typed registry now includes `randomcat`, `randomdog`, and `weather`. Their legacy JavaScript implementations remain for comparison until #34.
+
+HTTP transport is a narrow `get(url): Promise<unknown>` dependency, optionally supplied to `startBot` and exposed through command context. Commands validate every consumed response field before building Discord payloads. Weather receives the optional `APP_WEATHER_API` setting through startup configuration; absent or blank credentials produce a private unavailable reply without an HTTP request.
+
+Behavior corrections covered by dispatch regressions:
+
+- Cat, dog, and weather failures no longer dereference a missing HTTP error response. Malformed bodies and connection failures produce controlled replies; validated HTTP status or weather error details remain visible when available.
+- Image commands reject missing, malformed, oversized, or non-HTTP image URLs before constructing Discord buttons.
+- Weather encodes the location and API key as individual query values, preventing location punctuation from changing other query parameters.
+- Kelvin forecasts display wind speed in `m/s`; the legacy `K/m` label was not a speed unit.
+
+Valid embeds, image link buttons, weather rounding, slash definitions, and help visibility remain compatible. Offline tests enter through startup/dispatch or registration using the shared registry.

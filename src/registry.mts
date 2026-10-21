@@ -1,5 +1,5 @@
 import { MessageFlags } from 'discord.js';
-import type { Command, RegisteredEvent } from './contracts.mjs';
+import type { Command, HttpTransport, RegisteredEvent } from './contracts.mjs';
 import { ping } from './commands/ping.mjs';
 import { coinflip } from './commands/coinflip.mjs';
 import { eightBall } from './commands/8ball.mjs';
@@ -12,14 +12,20 @@ import { rps } from './commands/rps.mjs';
 import { help } from './commands/help.mjs';
 import { botinfo } from './commands/botinfo.mjs';
 import { userinfo } from './commands/userinfo.mjs';
+import { randomdog } from './commands/randomdog.mjs';
+import { weather } from './commands/weather.mjs';
+import { randomcat } from './commands/randomcat.mjs';
 
 // Migration checkpoint: remaining commands join this explicit registry in #30–33.
 export const commands: readonly Command[] = [
     eightBall, coinflip, cookie, diceroll, hug, kiss, rps, slap,
     botinfo, help, ping, userinfo,
+    randomcat, randomdog, weather,
 ];
 
-export function createEvents({ commandRegistry, reportReady, reportError }: {
+export function createEvents({ commandRegistry, reportReady, reportError, http, weatherApi }: {
+    http?: HttpTransport | undefined;
+    weatherApi?: string | undefined;
     commandRegistry: readonly Command[];
     reportReady: () => void;
     reportError: (error: unknown) => void;
@@ -41,7 +47,7 @@ export function createEvents({ commandRegistry, reportReady, reportError }: {
             if (!command) return;
 
             try {
-                await command.execute(interaction, { commands: commandRegistry });
+                await command.execute(interaction, { commands: commandRegistry, ...(http ? { http } : {}), weatherApi });
             } catch (error) {
                 reportError(error);
                 const response = { content: 'Well that didn\'t work, try another command maybe?' };
