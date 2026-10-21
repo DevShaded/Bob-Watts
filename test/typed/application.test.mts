@@ -1,3 +1,4 @@
+import { moderationDefinitions } from './fixtures/moderation-definitions.mjs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { IntentsBitField, MessageFlags, Partials } from 'discord.js';
@@ -34,13 +35,14 @@ await test('typed registration repeatedly sends all migrated definitions to guil
     for (const request of requests) {
         const names = request.body.map(definition => definition.name);
         assert.deepEqual(names.slice().sort(), [
-            '8ball', 'botinfo', 'coinflip', 'cookie', 'diceroll', 'help',
-            'hug', 'kiss', 'ping', 'rps', 'slap', 'userinfo',
+            '8ball', 'ban', 'botinfo', 'clean', 'clearinfractions', 'coinflip', 'cookie', 'diceroll',
+            'help', 'hug', 'infractions', 'kick', 'kiss', 'mute', 'ping', 'rps', 'slap',
+            'unban', 'unmute', 'userinfo', 'vckick', 'warn',
         ]);
-        assert.equal(new Set(names).size, 12);
+        assert.equal(new Set(names).size, 22);
         // Discord omits undefined optional fields when sending JSON.
-        const serialized: unknown = JSON.parse(JSON.stringify(request.body));
-        assert.deepEqual(serialized, publicDefinitions);
+        const serialized: unknown = JSON.parse(JSON.stringify(request.body.slice().sort((a, b) => a.name.localeCompare(b.name))));
+        assert.deepEqual(serialized, [...publicDefinitions, ...moderationDefinitions].sort((a, b) => a.name.localeCompare(b.name)));
     }
 });
 

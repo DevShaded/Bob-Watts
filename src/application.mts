@@ -1,6 +1,8 @@
+import { createDatabase } from './database.mjs';
+import type { ModerationDatabase, ModerationSchedule } from './moderation-contracts.mjs';
 import { GatewayIntentBits, Partials, REST, Routes } from 'discord.js';
 import { readRegistrationConfig, readStartupConfig } from './configuration.mjs';
-import type { Environment } from './configuration.mjs';
+import type { DatabaseConfig, Environment } from './configuration.mjs';
 import type { Command, Gateway, GatewayFactory, RestFactory } from './contracts.mjs';
 import { createDiscordGateway } from './discord.mjs';
 import { commands, createEvents } from './registry.mjs';
@@ -8,12 +10,16 @@ import { commands, createEvents } from './registry.mjs';
 export async function startBot({
     env = process.env,
     createGateway = createDiscordGateway,
+    createCommandDatabase = createDatabase,
+    schedule,
     commandRegistry = commands,
     reportError = console.error,
     reportReady = () => { console.log('Bot has successfully signed in and is listening to events'); },
 }: {
     env?: Environment;
     createGateway?: GatewayFactory;
+    createCommandDatabase?: (config: DatabaseConfig) => ModerationDatabase;
+    schedule?: ModerationSchedule;
     commandRegistry?: readonly Command[];
     reportError?: (error: unknown) => void;
     reportReady?: () => void;
@@ -33,7 +39,23 @@ export async function startBot({
         partials: [Partials.Message, Partials.Channel, Partials.Reaction],
         allowedMentions: { parse: ['users', 'roles'], repliedUser: true },
     });
-    for (const event of createEvents({ commandRegistry, reportReady, reportError })) {
+    let database: ModerationDatabase | undefined;
+    const destroyGateway = gateway.destroy.bind(gateway);
+    gateway.destroy = async () => {
+        try {
+            await destroyGateway();
+        } finally {
+            const activeDatabase = database;
+            database = undefined;
+            await activeDatabase?.$disconnect?.();
+        }
+    };
+    const context = {
+        database: (): ModerationDatabase => { database ??= createCommandDatabase(config); return database; },
+        reportError,
+        ...(schedule ? { schedule } : {}),
+    };
+    for (const event of createEvents({ commandRegistry, reportReady, reportError, context })) {
         gateway.subscribe(event, reportError);
     }
     try {

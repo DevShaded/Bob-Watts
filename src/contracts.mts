@@ -1,6 +1,8 @@
+import type { ModerationChannel, ModerationDatabase, ModerationMember, ModerationSchedule } from './moderation-contracts.mjs';
 import type {
     ClientOptions,
     InteractionEditReplyOptions,
+    InteractionDeferReplyOptions,
     InteractionReplyOptions,
     RESTPostAPIChatInputApplicationCommandsJSONBody,
     User,
@@ -32,20 +34,29 @@ export interface CommandInteraction {
     readonly commandName: string;
     readonly client: {
         readonly ws: { readonly ping: number };
-        readonly user: Pick<User, 'username' | 'createdAt' | 'displayAvatarURL'> | null;
+        readonly user: (Pick<User, 'username' | 'createdAt' | 'displayAvatarURL'> & { readonly id?: string }) | null;
         readonly emojis: { readonly cache: ReadonlyMap<string, { toString(): string }> };
         readonly guilds: { readonly cache: { readonly size: number } };
         readonly users: { readonly cache: { readonly size: number } };
     };
     readonly user: CommandUser;
     readonly options: {
+        getInteger?(name: string): number | null;
         getString(name: string): string | null;
         getUser(name: string): CommandUser | null;
     };
     readonly guild: {
         readonly id: string;
-        readonly members: { readonly cache: ReadonlyMap<string, CommandMember> };
+        readonly name?: string;
+        readonly members: {
+            readonly cache: ReadonlyMap<string, CommandMember>;
+            fetch?(id: string): Promise<ModerationMember>;
+            unban?(id: string): Promise<unknown>;
+        };
+        readonly channels?: { readonly cache: ReadonlyMap<string, ModerationChannel> };
     } | null;
+    readonly channel?: ModerationChannel | null;
+    deferReply?(options?: InteractionDeferReplyOptions): Promise<unknown>;
     readonly deferred: boolean;
     readonly replied: boolean;
     reply(options: InteractionReplyOptions): Promise<unknown>;
@@ -58,10 +69,15 @@ export interface CommandMetadata {
     readonly data: { toJSON(): RESTPostAPIChatInputApplicationCommandsJSONBody };
 }
 
+export interface CommandContext {
+    readonly commands: readonly CommandMetadata[];
+    readonly database?: () => ModerationDatabase;
+    readonly schedule?: ModerationSchedule;
+    readonly reportError?: (error: unknown) => void;
+}
+
 export interface Command extends CommandMetadata {
-    execute(interaction: CommandInteraction, context: {
-        readonly commands: readonly CommandMetadata[];
-    }): Promise<void>;
+    execute(interaction: CommandInteraction, context: CommandContext): Promise<void>;
 }
 
 // Event names match Discord. Non-chat-input interactions carry no command.
